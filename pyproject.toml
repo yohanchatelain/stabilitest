@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling", "pathspec"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stabilitest"
+version = "0.0.1"
+description = "Stability test."
+authors = [{ name = "Yohan Chatelain", email = "yohan.chatelain@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = ["Programming Language :: Python :: 3"]
+dependencies = [
+    "scikit-learn",
+    "templateflow",
+    "nilearn",
+    "significantdigits",
+    "tqdm",
+    "niworkflows",
+    "statsmodels",
+    "icecream",
+]
+
+[project.scripts]
+stabilitest = "stabilitest.__main__:main"
+
+[project.urls]
+"Bug Tracker" = "https://github.com/yohanchatelain/stabilitest/issues"
