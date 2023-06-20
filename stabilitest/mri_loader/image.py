@@ -5,17 +5,12 @@ from multiprocessing import Pool
 
 import nibabel
 import nilearn
-import nilearn.masking
+from nilearn.masking import apply_mask, intersect_masks
 import numpy as np
 import tqdm
-from templateflow import api as tflow
 
-import stabilitest.mri.constants as mri_constants
+import stabilitest.mri_loader.constants as mri_constants
 import stabilitest.pprinter as mrip
-
-"""
-Loader and dumper
-"""
 
 
 def load_derivative(path):
@@ -103,7 +98,7 @@ def combine_mask(masks_list, operator):
         threshold = 1
     else:
         threshold = 0.5
-    return nilearn.masking.intersect_masks(masks_list, threshold=threshold)
+    return intersect_masks(masks_list, threshold=threshold)
 
 
 def resample_image(source, target):
@@ -191,9 +186,7 @@ def load_brain_mask(prefix, dataset, subject, template, datatype):
 def get_masked_t1(t1, mask, smooth_kernel, normalize):
     if smooth_kernel == 0:
         smooth_kernel = None
-    masked = nilearn.masking.apply_mask(
-        imgs=t1, mask_img=mask, smoothing_fwhm=smooth_kernel
-    )
+    masked = apply_mask(imgs=t1, mask_img=mask, smoothing_fwhm=smooth_kernel)
     if normalize:
         masked = normalize_ndarray(masked)
 
@@ -222,6 +215,8 @@ def get_masked_t1s(args, t1s, supermask):
 
 
 def get_template(template):
+    from templateflow import api as tflow
+
     image_path = tflow.get(
         template, desc=None, resolution=1, suffix="T1w", extension="nii.gz"
     )

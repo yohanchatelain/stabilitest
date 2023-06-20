@@ -11,12 +11,16 @@ class NumpySample(Sample):
         self.args = args
         self.data = None
         self.size = None
+        self.paths = None
 
     def get_size(self):
         return self.size
 
     def get_subsample(self, indexes=None):
         return self.data[self.__parse_index(indexes)]
+
+    def get_subsample_id(self, indexes):
+        return self.paths[self.__parse_index(indexes)]
 
     def __parse_index(self, indexes):
         if indexes is None:
@@ -30,9 +34,12 @@ class NumpySample(Sample):
     def _load(self, prefix, force):
         if self.data is None or force:
             path_re = os.path.join(prefix, "*", "*.npy")
-            paths = glob.glob(path_re)
-            self.data = np.stack([np.load(path) for path in paths])
+            self.paths = glob.glob(path_re)
+            self.data = np.stack([np.load(path) for path in self.paths])
             self.size = self.data.shape[0]
+
+    def resample(self, target):
+        pass
 
     def load(self, force):
         pass

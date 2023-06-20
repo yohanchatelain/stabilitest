@@ -1,7 +1,7 @@
 import numpy as np
 
-import stabilitest.mri.constants as mri_constants
-import stabilitest.mri.image as mri_image
+import stabilitest.mri_loader.constants as mri_constants
+import stabilitest.mri_loader.image as mri_image
 
 
 def _get_reference(args, ext):

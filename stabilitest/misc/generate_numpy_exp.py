@@ -1,7 +1,6 @@
 import numpy as np
 import os
 import argparse
-import ast
 
 
 def generate_gaussian(args):

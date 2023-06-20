@@ -6,10 +6,11 @@ import warnings
 from icecream import ic
 
 import stabilitest
-import stabilitest.mri.sample
 import stabilitest.model as model
-import stabilitest.mri.distance as mri_distance
+import stabilitest.mri_loader.distance as mri_distance
+import stabilitest.mri_loader.sample
 import stabilitest.normality
+import stabilitest.numpy_loader.sample
 import stabilitest.parse_args as parse_args
 import stabilitest.pprinter as pprinter
 import stabilitest.snr as snr
@@ -19,17 +20,19 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 
 
 def get_reference_sample(args):
-    if args.application == "mri":
-        return stabilitest.mri.sample.get_reference_sample(args)
-    if args.application == "numpy":
-        return stabilitest.numpy.sample.get_reference_sample(args)
+    if args.domain == "smri":
+        return stabilitest.mri_loader_loader.sample.get_reference_sample(args)
+    if args.domain == "numpy":
+        return stabilitest.numpy_loader.sample.get_reference_sample(args)
+    raise Exception(f"Domain not found {args.domain}")
 
 
 def get_target_sample(args):
-    if args.application == "mri":
-        return stabilitest.mri.sample.get_target_sample(args)
-    if args.application == "numpy":
-        return stabilitest.numpy.sample.get_target_sample(args)
+    if args.domain == "smri":
+        return stabilitest.mri_loader_loader.sample.get_target_sample(args)
+    if args.domain == "numpy":
+        return stabilitest.numpy_loader.sample.get_target_sample(args)
+    raise Exception(f"Domain not found {args.domain}")
 
 
 def run_kta(args):
@@ -46,7 +49,7 @@ def run_loo(args):
     return fvr
 
 
-def run_one(args):
+def run_test(args):
     reference_sample = get_reference_sample(args)
     target_sample = get_target_sample(args)
     reference_sample.load()
@@ -87,11 +90,22 @@ def run_snr(args):
     snr.main(args)
 
 
-tests = {
+cross_validation_models = {
     "kta": run_kta,
     "loo": run_loo,
     "k-fold": run_k_fold,
-    "one": run_one,
+}
+
+
+def run_cross_validation(args):
+    sample = get_reference_sample(args)
+    sample.load()
+    cross_validation_models[args.model](args)
+
+
+tests = {
+    "test": run_test,
+    "cross-validation": run_cross_validation,
     "normality": run_normality,
     "stats": run_stats,
     "distance": run_distance,

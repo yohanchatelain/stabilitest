@@ -4,7 +4,7 @@ import scipy
 import nibabel
 import nilearn
 
-import stabilitest.mri.image as image
+import stabilitest.mri_loader.image as image
 import stabilitest.pprinter as pprinter
 
 
@@ -66,7 +66,6 @@ def run_normality_test(args, sample):
         pprinter.print_sep1("Normality test")
         non_normal_image = test_normality(args, t1s, masks, alpha)
 
-        
         fields = [
             "non-normal",
             dataset,

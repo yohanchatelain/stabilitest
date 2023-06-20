@@ -3,7 +3,7 @@ import numpy as np
 import significantdigits
 from significantdigits import Error, Method
 
-import stabilitest.mri.image as mri_image
+import stabilitest.mri_loader.image as mri_image
 
 # TODO Fix
 

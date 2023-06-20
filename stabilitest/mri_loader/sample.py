@@ -1,6 +1,6 @@
 import numpy as np
 
-import stabilitest.mri.image as mri_image
+import stabilitest.mri_loader.image as mri_image
 from stabilitest.sample import Sample
 
 
@@ -14,6 +14,15 @@ class MRISample(Sample):
         self.supermask = None
         # T1ws masked, smoothed and min-max scaled
         self.preproc_t1ws = None
+
+    def copy(self, sample):
+        self.args = sample.args
+        self.t1ws = sample.t1ws
+        self.t1ws_metadata = sample.t1ws_metadata
+        self.brain_masks = sample.brain_masks
+        self.brain_masks_metadata = sample.brain_masks_metadata
+        self.supermask = sample.supermask
+        self.preproc_t1ws = sample.preproc_t1ws
 
     def load(self, force):
         pass
@@ -102,6 +111,31 @@ class MRISampleReference(MRISample):
         )
         self.__mask_sample(force)
 
+    def get_info(self, indexes):
+        info = {
+            "reference_prefix": self.args.reference_prefix,
+            "reference_dataset": self.args.reference_dataset,
+            "reference_template": self.args.reference_template,
+            "reference_sample_size": self.get_size(),
+            "reference_fwhm": self.args.smooth_kernel,
+            "reference_mask": self.args.combination_mask,
+        }
+
+        return info
+
+    def as_target(self):
+        """
+        return reference sample as a target sample
+        """
+        args = self.args
+        args.target_prefix = args.reference_prefix
+        args.target_dataset = args.reference_dataset
+        args.target_subject = args.reference_subject
+        args.target_template = args.reference_template
+        target_sample = MRISampleTarget(self.args)
+        target_sample.copy(self)
+        return target_sample
+
 
 class MRISampleTarget(MRISample):
     def load(self, force=False):
@@ -113,6 +147,16 @@ class MRISampleTarget(MRISample):
             datatype=self.args.datatype,
         )
         self.__mask_sample(force)
+
+    def get_info(self, indexes):
+        info = {
+            "target_prefix": self.args.target_prefix,
+            "target_dataset": self.args.target_dataset,
+            "target_template": self.args.target_template,
+            "target_filename": self.get_subsample_id(indexes),
+        }
+
+        return info
 
 
 def get_reference_sample(args):

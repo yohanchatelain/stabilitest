@@ -7,15 +7,20 @@ import stabilitest.pprinter as pprinter
 import stabilitest.statistics.distribution as dist
 import stabilitest.statistics.multiple_testing as mt
 from stabilitest.collect import stats_collect
-from stabilitest.mri.sample import MRISample
+from stabilitest.mri_loader.sample import MRISample
 
 
-def run_tests(args, target_id, reference_sample, target_sample, distribution, **info):
+def run_tests(args, target_id, reference_sample, target_sample, distribution):
     confidences = args.confidence
-    sample_size = info["sample_size"]
 
-    target_id = target_sample.get_subsample_id(target_id)
     score_name = distribution.get_name()
+
+    reference_info = reference_sample.get_info()
+    target_info = target_sample.get_info(target_id)
+    info = reference_info | target_info
+
+    sample_size = reference_sample.get_size()
+
     pprinter.print_info(score_name, sample_size, target_id, target_id)
 
     # Get p-values and sort them into 1D array
@@ -36,55 +41,18 @@ def run_tests(args, target_id, reference_sample, target_sample, distribution, **
                 print_sep()
 
             nb_reject, nb_test = method(target_id, alpha, p_values)
-            stats_collect.append(
-                **info,
-                confidence=confidence,
-                target=target_id,
-                reject=nb_reject,
-                tests=nb_test,
-                method=method.__name__,
-            )
+            local_info = {
+                "confidence": confidence,
+                "reject": nb_reject,
+                "tests": nb_test,
+                "method": method.__name__,
+            }
+            stats_collect.append(**info, **local_info)
 
             results[method.__name__] = nb_reject, nb_test
         print_sep()
 
     return results
-
-
-def get_info(args, **extra_kwargs):
-    reference_dataset = args.reference_dataset
-    reference_subject = args.reference_subject
-    reference_template = args.reference_template
-
-    if "target_dataset" in args:
-        target_dataset = (
-            args.target_dataset if args.target_dataset else reference_dataset
-        )
-        target_subject = (
-            args.target_subject if args.target_subject else reference_subject
-        )
-        target_template = (
-            args.target_template if args.target_template else reference_template
-        )
-    else:
-        target_dataset = reference_dataset
-        target_subject = reference_subject
-        target_template = reference_template
-
-    fwhm = args.smooth_kernel
-    mask = args.mask_combination
-
-    return dict(
-        reference_dataset=reference_dataset,
-        reference_subject=reference_subject,
-        reference_template=reference_template,
-        target_dataset=target_dataset,
-        target_subject=target_subject,
-        target_template=target_template,
-        fwhm=fwhm,
-        mask=mask,
-        **extra_kwargs,
-    )
 
 
 def perform_test_per_target(
@@ -108,11 +76,7 @@ def perform_test_per_target(
         A dictionnary that contains for each target the FVR for each method used.
     """
 
-    sample_size = reference_sample.get_size()
-
-    info = get_info(
-        args, sample_size=sample_size, kth_round=kth_round, nb_round=nb_round
-    )
+    extra_info = dict(kth_round=kth_round, nb_round=nb_round)
 
     distribution.fit(reference_sample.get_subsample())
 
@@ -181,7 +145,7 @@ def run_kta(args, sample):
         args,
         reference_sample=sample,
         reference_ids=list(range(sample.get_size())),
-        target_sample=sample,
+        target_sample=sample.as_target(),
         target_ids=list(range(sample.get_size())),
         distribution=distribution,
         nb_round=1,
@@ -199,7 +163,7 @@ def run_loo(args, sample):
     fvr = perform_kfold(
         args,
         reference_sample=sample,
-        target_sample=sample,
+        target_sample=sample.as_target(),
         distribution=distribution,
         nb_rounds=sample.get_size(),
     )
@@ -236,7 +200,7 @@ def run_kfold(args, sample):
     fvr = perform_kfold(
         args,
         reference_sample=sample,
-        target_sample=sample,
+        target_sample=sample.as_target(),
         distribution=distribution,
         nb_rounds=args.k_fold_rounds,
     )
