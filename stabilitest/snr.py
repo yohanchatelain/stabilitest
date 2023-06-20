@@ -23,6 +23,6 @@ def compute_snr(args, x):
     return mean / std
 
 
-def main(args):
+def main(args, sample_module):
     t1 = _get_reference(args, mri_constants.t1w_preproc_extension)
     compute_snr(args, t1)

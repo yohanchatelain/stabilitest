@@ -5,9 +5,10 @@ from multiprocessing import Pool
 
 import nibabel
 import nilearn
-from nilearn.masking import apply_mask, intersect_masks
 import numpy as np
 import tqdm
+from nilearn.masking import apply_mask, intersect_masks
+from icecream import ic
 
 import stabilitest.mri_loader.constants as mri_constants
 import stabilitest.pprinter as mrip
@@ -78,8 +79,9 @@ def load_derivatives(root_paths, derivative_path):
     derivatives = []
     for path in root_paths:
         dpath = glob.glob(os.path.join(path, derivative_path))
-        if len(dpath) > 1:
-            logging.warning(f"More than one file found for {dpath}")
+        if len(dpath) > 0:
+            if len(dpath) > 1:
+                logging.warning(f"More than one file found for {dpath}")
             image = load_derivative(dpath[0])
         else:
             continue
@@ -108,9 +110,9 @@ def resample_image(source, target):
 def resample_images(sources, target):
     resampled_images = []
     for source in sources:
-        resampled = nilearn.image.resample_to_img(source, target)
-        resampled.set_filename(source.get_filename())
-        resampled_images.append(resampled)
+        source = nilearn.image.resample_to_img(source, target)
+        source.set_filename(source.get_filename())
+        resampled_images.append(source) 
     return np.array(resampled_images)
 
 
@@ -128,7 +130,7 @@ def normalize_image(image):
 
 def get_paths(prefix, dataset):
     regexp = os.path.join(prefix, f"*{dataset}*", "**")
-    paths = glob.glob(regexp, recursive=True)
+    paths = glob.glob(regexp)
     return paths
 
 
@@ -202,7 +204,7 @@ def get_masked_t1_curr(margs):
 
 def get_masked_t1s(args, t1s, supermask):
     results = []
-    with Pool(args.cpus) as p:
+    with Pool(min(args.cpus, len(t1s))) as p:
         nt1s = len(t1s)
         map_args = zip(t1s, [supermask] * nt1s, [args] * nt1s)
 
@@ -211,7 +213,7 @@ def get_masked_t1s(args, t1s, supermask):
                 pbar.update()
                 results.append(image)
 
-    return np.stack(results), supermask
+    return np.stack(results)
 
 
 def get_template(template):

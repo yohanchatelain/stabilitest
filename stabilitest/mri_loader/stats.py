@@ -28,7 +28,7 @@ def get_inputs(args):
     return t1s_masked, supermask
 
 
-def compute_stats(args):
+def compute_stats(args, sample_module):
     t1s_masked, supermask = get_inputs(args)
 
     mean = np.mean(t1s_masked, axis=0)

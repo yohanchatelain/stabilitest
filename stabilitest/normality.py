@@ -16,10 +16,28 @@ def get_normality_mask(normality_mask_dir):
     return image.get_fdata().astype("bool")
 
 
+# define a function for left rotation
+def left_rotate_tuple(t, n):
+    return t[n:] + t[:n]
+
+
+def test_normality(args, sample):
+    data = sample.get_subsample()
+    
+    left_rotate_tuple(list(zip(*enumerate(data.shape)))[0], 1)
+    
+    shapiro_test = (
+        scipy.stats.shapiro(data[..., index])[1] < alpha
+        for index in tqdm.tqdm(range(t1_shape))
+    )
+    non_normal_voxels = np.fromiter(shapiro_test, bool)
+
+
 def test_normality(args, t1s, masks, alpha):
     """
     Compute a voxel-wise normality test for all images
-    Returns a binary Nifti image with voxels rejecting the normality test set to True
+    Returns a binary Nifti image with voxels rejecting
+    the normality test set to True
     """
 
     t1_masked, supermask = image.get_masked_t1s(args, t1s, masks)
@@ -32,8 +50,8 @@ def test_normality(args, t1s, masks, alpha):
     # We test the normality using the Shapiro-Wilk test
     # scipy.stats.shapiro returns a pair (W,p-value)
     # Normality is rejected if p-value < 0.05.
-    # It gives a 3D array of boolean with True if the voxels rejects the
-    # normality test
+    # It gives a 3D array of boolean with True if the
+    # voxels rejects the normality test
     shapiro_test = (
         scipy.stats.shapiro(t1_masked[..., index])[1] < alpha
         for index in tqdm.tqdm(range(t1_shape))
@@ -48,15 +66,17 @@ def test_normality(args, t1s, masks, alpha):
 
     print(f"Card(Voxels not normal) = {nb_non_normal}")
     print(f"Card(Voxels)            = {nb_voxels}")
-    print(f"non-normal voxel ratio   = {ratio:.2e} [{ratio*100:f}%]")
+    print(f"non-normal voxel ratio  = {ratio:.2e} [{ratio*100:f}%]")
 
     return normality_image
 
 
-def run_normality_test(args, sample):
+def run_normality_test(args, sample_module):
     """
     Run the non-normality test for the given sample
     """
+
+    sample = sample_module.get_reference_sample(args)
 
     filenames = []
 
@@ -64,7 +84,7 @@ def run_normality_test(args, sample):
         alpha = 1 - confidence
 
         pprinter.print_sep1("Normality test")
-        non_normal_image = test_normality(args, t1s, masks, alpha)
+        non_normal_image = test_normality(args, sample, alpha)
 
         fields = [
             "non-normal",

@@ -27,13 +27,13 @@ def pce(target, alpha, p_values):
 
     if pprinter.verbose():
         pprinter.print_name_method("Per-Comparison Error (Uncorrected)")
-        print(f"- Alpha                 = {threshold:f}")
-        print(f"- Card(Reject)          = {nb_reject}")
-        print(f"- Card(Tests)          = {size}")
+        print(f"- Alpha                    = {threshold:f}")
+        print(f"- Card(Reject)             = {nb_reject}")
+        print(f"- Card(Tests)              = {size}")
         print(f"- Card(Reject)/Card(Tests) = {ratio:.2e} [{ratio*100:f}%]")
     pprinter.print_result(target, nb_reject, size, alpha, passed, name)
 
-    return nb_reject, size
+    return nb_reject, size, passed
 
 
 def pce_sig(target, alpha, reject):
@@ -48,12 +48,12 @@ def pce_sig(target, alpha, reject):
 
     if pprinter.verbose():
         pprinter.print_name_method("Per-Comparison Error (Uncorrected)")
-        print(f"- Card(Reject)          = {nb_reject}")
+        print(f"- Card(Reject)         = {nb_reject}")
         print(f"- Card(Tests)          = {size}")
         print(f"- Card(FP)/Card(Tests) = {ratio:.2e} [{ratio*100:f}%]")
     pprinter.print_result(target, nb_reject, size, alpha, passed, name)
 
-    return nb_reject, size
+    return nb_reject, size, passed
 
 
 def mct(target, alpha, p_values, method, short_name, long_name, success_test):
@@ -87,8 +87,8 @@ def mct(target, alpha, p_values, method, short_name, long_name, success_test):
         pprinter.print_name_method(long_name)
         ct = corrected_threshold
         if ct is not None:
-            print(f"- Alpha correction      = {ct:f} ({ct:.3e})")
-        print(f"- Card(FP)              = {nb_reject}")
+            print(f"- Alpha correction     = {ct:f} ({ct:.3e})")
+        print(f"- Card(FP)             = {nb_reject}")
         print(f"- Card(Tests)          = {size}")
         print(f"- Card(FP)/Card(Tests) = {ratio:.2e} [{ratio*100:f}%]")
 
@@ -96,7 +96,7 @@ def mct(target, alpha, p_values, method, short_name, long_name, success_test):
         target, nb_reject, size, alpha, success_test(nb_reject, size, alpha), name
     )
 
-    return nb_reject, size
+    return nb_reject, size, success_test(nb_reject, size, alpha)
 
 
 def fwe_bonferroni(target, alpha, p_values):
@@ -289,4 +289,4 @@ def get_method_names():
 
 
 def get_methods(args):
-    return [___methods[name] for name in args.multiple_comparison_methods]
+    return [___methods[name] for name in args.multiple_comparison_tests]

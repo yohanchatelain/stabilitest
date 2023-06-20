@@ -1,11 +1,14 @@
-from typing import Dict
-import scipy.stats as sps
-import numpy as np
-import tqdm
-from itertools import chain
 import multiprocessing
+import warnings
+from itertools import chain
+from typing import Dict
+
+import numpy as np
+import scipy.stats as sps
 import significantdigits
 import sklearn.mixture
+import tqdm
+from icecream import ic
 
 
 def sequential_fit_normal(x, fit):
@@ -51,7 +54,7 @@ class Distribution:
         return self.parameters["scale"]
 
     def p_value(self, x):
-        pass
+        raise NotImplementedError
 
 
 class Student(Distribution):
@@ -76,15 +79,18 @@ class Gaussian(Distribution):
         super().__init__("norm", parameters)
 
     def z_score(self, x):
-        return (x - self.get_loc()) / self.get_scale()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return (x - self.get_loc()) / self.get_scale()
 
     def p_value(self, x):
-        z = self.z_score(x)
-        mean = self.get_loc()
-        std = self.get_scale()
-        low = sps.norm.cdf(z, loc=mean, scale=std)
-        up = sps.norm.sf(z, loc=mean, scale=std)
-        return 2 * np.min((low, up), axis=0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            mean = self.get_loc()
+            std = self.get_scale()
+            low = sps.norm.cdf(x, loc=mean, scale=std)
+            up = sps.norm.sf(x, loc=mean, scale=std)
+            return 2 * np.min((low, up), axis=0)
 
     def fit(self, x):
         self.parameters["loc"] = np.mean(x, axis=0)
@@ -99,12 +105,11 @@ class GaussianSkew(Distribution):
         return (x - self.get_loc()) / self.get_scale()
 
     def p_value(self, x):
-        z = self.z_score(x)
         mean = self.get_loc()
         std = self.get_scale()
         a = self.parameters["a"]
-        low = sps.skewnorm.cdf(z, a=a, loc=mean, scale=std)
-        up = sps.skewnorm.sf(z, a=a, loc=mean, scale=std)
+        low = sps.skewnorm.cdf(x, a=a, loc=mean, scale=std)
+        up = sps.skewnorm.sf(x, a=a, loc=mean, scale=std)
         return 2 * np.min((low, up), axis=0)
 
     def fit(self, x):
@@ -119,13 +124,14 @@ class GaussianGeneral(Distribution):
         return (x - self.get_loc()) / self.get_scale()
 
     def p_value(self, x):
-        z = self.z_score(x)
-        mean = self.get_loc()
-        std = self.get_scale()
-        beta = self.parameters["beta"]
-        low = sps.gennorm.cdf(z, beta=beta, loc=mean, scale=std)
-        up = sps.gennorm.sf(z, beta=beta, loc=mean, scale=std)
-        return 2 * np.min((low, up), axis=0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            mean = self.get_loc()
+            std = self.get_scale()
+            beta = self.parameters["beta"]
+            low = sps.gennorm.cdf(x, beta=beta, loc=mean, scale=std)
+            up = sps.gennorm.sf(x, beta=beta, loc=mean, scale=std)
+            return 2 * np.min((low, up), axis=0)
 
     def fit(self, x):
         self.parameters = chain.from_iterable(sps.gennorm.fit(x))

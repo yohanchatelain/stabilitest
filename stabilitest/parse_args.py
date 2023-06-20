@@ -5,6 +5,7 @@ from icecream import ic
 
 import stabilitest.mri_loader.parse_args
 import stabilitest.numpy_loader.parse_args
+import stabilitest.statistics.multiple_testing
 
 cross_validation_models = ["kta", "loo", "kfold"]
 
@@ -58,7 +59,7 @@ def init_stats_args(parser):
     parser.add_argument(
         "--confidence",
         action="store",
-        default=0.95,
+        default=[0.95],
         type=float,
         help="Confidence",
         nargs="+",
@@ -81,6 +82,16 @@ def init_stats_args(parser):
     )
 
 
+def init_multiple_comparision_tests_args(parser):
+    parser.add_argument(
+        "--multiple-comparison-tests",
+        nargs="+",
+        default=["fwe_bonferroni"],
+        choices=stabilitest.statistics.multiple_testing.get_method_names(),
+        help="Multiple comparison tests",
+    )
+
+
 # Global submodules (to load before domain submodules)
 def init_module_test(parser):
     msg = """
@@ -89,6 +100,8 @@ def init_module_test(parser):
     subparser = parser.add_parser("test", help=msg)
     init_global_args(subparser)
     init_stats_args(subparser)
+    init_multiple_comparision_tests_args(subparser)
+
     return subparser
 
 
@@ -98,6 +111,14 @@ def init_module_normality(parser):
     """
     subparser = parser.add_parser("normality", help=msg)
     init_global_args(subparser)
+    parser.add_argument(
+        "--confidence",
+        action="store",
+        default=[0.95],
+        type=float,
+        help="Confidence",
+        nargs="+",
+    )
     return subparser
 
 
@@ -174,8 +195,12 @@ def init_module_cross_validation(parser):
     subparser = parser.add_parser("cross-validation", help=msg)
     init_global_args(subparser)
     init_stats_args(subparser)
+    init_multiple_comparision_tests_args(subparser)
     subparser.add_argument(
-        "--model", choices=cross_validation_models, help="Model to perform"
+        "--model",
+        required=True,
+        choices=cross_validation_models,
+        help="Model to perform",
     )
     subparser.add_argument(
         "--k-fold-rounds",

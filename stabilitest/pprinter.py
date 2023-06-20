@@ -31,11 +31,11 @@ def verbose():
 
 
 def __pass_color_msg(msg):
-    return f"{BColors.BOLD}{BColors.OKGREEN}{msg}{BColors.ENDC}"
+    return f"{BColors.BOLD.value}{BColors.OKGREEN.value}{msg}{BColors.ENDC.value}"
 
 
 def __fail_color_msg(msg):
-    return f"{BColors.BOLD}{BColors.FAIL}{msg}{BColors.ENDC}"
+    return f"{BColors.BOLD.value}{BColors.FAIL.value}{msg}{BColors.ENDC.value}"
 
 
 def __test_color(passed):
@@ -43,7 +43,7 @@ def __test_color(passed):
 
 
 def __name_msg(name):
-    return f"{BColors.BOLD}{name:<9}{BColors.ENDC} " if name else ""
+    return f"{BColors.BOLD.value}{name:<9}{BColors.ENDC.value} " if name else ""
 
 
 def __ratio_msg(alpha, reject, tests, passed):
@@ -56,9 +56,9 @@ def __ratio_msg(alpha, reject, tests, passed):
 
 def print_result(target, reject, tests, alpha, passed, name=None):
     name_msg = __name_msg(name)
-    label_msg = passed
+    label_msg = __pass_color_msg("PASS") if passed else __fail_color_msg("FAIL")
     ratio_msg = __ratio_msg(alpha, reject, tests, passed)
-    filename_msg = target.get_filename()
+    filename_msg = target
 
     print(f"{name_msg} {label_msg} {ratio_msg} {filename_msg}")
 
@@ -72,7 +72,7 @@ def print_info(score, nsample, target, i=None, verbose=False):
 
 
 def print_name_method(name):
-    print(f"{BColors.BOLD}{name}{BColors.ENDC}")
+    print(f"{BColors.BOLD.value}{name}{BColors.ENDC.value}")
 
 
 def print_debug(msg, verbose=False):

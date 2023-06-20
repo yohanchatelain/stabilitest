@@ -6,12 +6,22 @@ import numpy as np
 from stabilitest.sample import Sample
 
 
+def preprocess(reference_sample, reference_ids, target_sample, target_ids):
+    pass
+
+
 class NumpySample(Sample):
     def __init__(self, args):
         self.args = args
         self.data = None
         self.size = None
         self.paths = None
+
+    def copy(self, sample):
+        self.args = sample.args
+        self.data = sample.data
+        self.size = sample.size
+        self.paths = sample.paths
 
     def get_size(self):
         return self.size
@@ -25,11 +35,17 @@ class NumpySample(Sample):
     def __parse_index(self, indexes):
         if indexes is None:
             return ...
-        if isinstance(indexes, int):
-            return np.array(indexes)
+        if indexes is ...:
+            return ...
+        if isinstance(indexes, np.ndarray):
+            return indexes
         if isinstance(indexes, list):
             return np.array(indexes)
-        raise Exception(f"Unknown index type {type(indexes)}")
+        try:
+            indexes = int(indexes)
+            return np.array(indexes)
+        except Exception:
+            raise Exception(f"Unknown index type {type(indexes)}")
 
     def _load(self, prefix, force):
         if self.data is None or force:
@@ -49,10 +65,31 @@ class NumpySampleReference(NumpySample):
     def load(self, force=False):
         self._load(self.args.reference, force)
 
+    def get_info(self, indexes=None):
+        info = {"reference": self.args.reference, "normalize": self.args.normalize}
+
+        return info
+
+    def as_target(self):
+        args = self.args
+        args.target = args.reference
+        args.normalize = args.normalize
+        sample = NumpySampleTarget(args)
+        sample.copy(self)
+        return sample
+
 
 class NumpySampleTarget(NumpySample):
     def load(self, force=False):
         self._load(self.args.target, force)
+
+    def get_info(self, indexes):
+        info = {
+            "target": self.args.target,
+            "target_filename": self.get_subsample_id(indexes),
+            "normalize": self.args.normalize,
+        }
+        return info
 
 
 def get_reference_sample(args):

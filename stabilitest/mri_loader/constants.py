@@ -2,6 +2,7 @@ import inspect
 import json
 import os
 from enum import Enum
+from re import sub
 
 import niworkflows.data
 import bids
@@ -86,6 +87,8 @@ def get_csf_label_entity(gzip=True):
 
 
 def get_derivatives_path(dataset, subject, template, datatype, derivative):
+    subject = subject[4:] if subject.startswith("sub-") else subject
+
     entities = {
         "dataset": dataset,
         "subject": subject,

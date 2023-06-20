@@ -79,12 +79,8 @@ def init_test_args(parser):
 
 
 def init_module(parser, subparser):
-    
     smri_parser = subparser.add_parser("smri")
     init_global_args(smri_parser)
 
     if parser.prog == "stabilitest test":
         init_test_args(smri_parser)
-
-    ic(parser)
-    ic(subparser)

@@ -19,88 +19,68 @@ from stabilitest.collect import stats_collect
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
 
-def get_reference_sample(args):
+def get_sample_module(args):
     if args.domain == "smri":
-        return stabilitest.mri_loader_loader.sample.get_reference_sample(args)
+        return stabilitest.mri_loader.sample
     if args.domain == "numpy":
-        return stabilitest.numpy_loader.sample.get_reference_sample(args)
-    raise Exception(f"Domain not found {args.domain}")
-
-
-def get_target_sample(args):
-    if args.domain == "smri":
-        return stabilitest.mri_loader_loader.sample.get_target_sample(args)
-    if args.domain == "numpy":
-        return stabilitest.numpy_loader.sample.get_target_sample(args)
+        return stabilitest.numpy_loader.sample
     raise Exception(f"Domain not found {args.domain}")
 
 
 def run_kta(args):
-    sample = get_reference_sample(args)
-    sample.load()
-    fvr = model.run_kta(args, sample)
+    sample_module = get_sample_module(args)
+    fvr = model.run_kta(args, sample_module)
     return fvr
 
 
 def run_loo(args):
-    sample = get_reference_sample(args)
-    sample.load()
-    fvr = model.run_loo(args, sample)
+    sample_module = get_sample_module(args)
+    fvr = model.run_loo(args, sample_module)
     return fvr
 
 
 def run_test(args):
-    reference_sample = get_reference_sample(args)
-    target_sample = get_target_sample(args)
-    reference_sample.load()
-    target_sample.load()
-    fvr = model.run_one(args, reference_sample, target_sample)
+    sample_module = get_sample_module(args)
+    fvr = model.run_one(args, sample_module)
     return fvr
 
 
 def run_normality(args):
-    sample = get_reference_sample(args)
-    sample.load()
-    normality = stabilitest.normality.run_normality_test(args, sample)
+    sample_module = get_sample_module(args)
+    normality = stabilitest.normality.run_normality_test(args, sample_module)
     print(normality)
 
 
-def run_k_fold(args):
-    sample = get_reference_sample(args)
-    sample.load()
-    fvr = model.run_kfold(args, sample)
+def run_kfold(args):
+    sample_module = get_sample_module(args)
+    fvr = model.run_kfold(args, sample_module)
     return fvr
 
 
 def run_stats(args):
-    sample = get_reference_sample(args)
-    sample.load()
-    stabilitest.statistics.stats.compute_stats(args, sample)
+    sample_module = get_sample_module(args)
+    stabilitest.mri_loader.stats.compute_stats(args, sample_module)
 
 
 def run_distance(args):
-    sample = get_reference_sample(args)
-    sample.load()
-    mri_distance.main(args, sample)
+    sample_module = get_sample_module(args)
+    stabilitest.mri_loader.distance.main(args, sample_module)
 
 
 def run_snr(args):
-    sample = get_reference_sample(args)
-    sample.load()
-    snr.main(args)
+    sample_module = get_sample_module(args)
+    stabilitest.snr.main(args, sample_module)
 
 
 cross_validation_models = {
     "kta": run_kta,
     "loo": run_loo,
-    "k-fold": run_k_fold,
+    "kfold": run_kfold,
 }
 
 
 def run_cross_validation(args):
-    sample = get_reference_sample(args)
-    sample.load()
-    cross_validation_models[args.model](args)
+    return cross_validation_models[args.model](args)
 
 
 tests = {
@@ -111,6 +91,23 @@ tests = {
     "distance": run_distance,
     "snr": run_snr,
 }
+
+
+def parse_output(output):
+    methods = {}
+    for run in output:
+        for _, results in run.items():
+            for (method, confidence), result in results.items():
+                methods[method, result.confidence] = methods.get(
+                    (method, result.confidence), 0
+                ) + int(result.passed)
+
+    for (method, confidence), passed in methods.items():
+        nb_tests = len(output)
+        ratio = passed / nb_tests
+        print(
+            f"Method: {method}, alpha: {1-confidence:.5f}, passed: {passed}, tests: {nb_tests}, ratio: {ratio:.2f}"
+        )
 
 
 def main():
@@ -125,7 +122,9 @@ def main():
         parser.print_help()
         return
 
-    tests[parsed_args.analysis](parsed_args)
+    output = tests[parsed_args.analysis](parsed_args)
+    parse_output(output)
+
     stats_collect.set_name(parsed_args.output)
     stats_collect.dump()
 

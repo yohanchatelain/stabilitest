@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import argparse
+import shutil
 
 
 def generate_gaussian(args):
@@ -9,17 +10,20 @@ def generate_gaussian(args):
 
 
 def dump(args, data):
+    if args.force and os.path.exists(args.output):
+        shutil.rmtree(args.output)
+
     os.makedirs(args.output, exist_ok=args.force)
     for i in range(args.sample):
         path = os.path.join(args.output, f"rep_{i}")
-        os.makedirs(path)
+        os.makedirs(path, exist_ok=args.force)
         path = os.path.join(path, "data.npy")
         np.save(path, data[i])
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="experiments generator", prog="expgen")
-    parser.add_argument("--sample", default=10, help="Sample size")
+    parser.add_argument("--sample", type=int, default=10, help="Sample size")
     parser.add_argument(
         "--shape",
         type=int,
