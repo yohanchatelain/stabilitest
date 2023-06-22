@@ -6,17 +6,17 @@ import stabilitest.mri_loader.image as mri_image
 from stabilitest.sample import Sample
 
 
-def preprocess(reference_sample, reference_ids, target_sample, target_ids):
+def preprocess(reference_sample, reference_ids, target_sample=None, target_ids=None):
     supermask = reference_sample.compute_supermask(reference_ids)
+    reference_sample.set_supermask(supermask)
     masked_t1w_ref = reference_sample.get_preproc_t1w(reference_ids, supermask)
     reference_sample.set_preproc_t1w(masked_t1w_ref)
 
-    resample_target_img = reference_sample.get_subsample_as_image(0)
-
-    target_sample.resample(resample_target_img)
-
-    masked_t1w_target = target_sample.get_preproc_t1w(None, supermask)
-    target_sample.set_preproc_t1w(masked_t1w_target)
+    if target_sample:
+        resample_target_img = reference_sample.get_subsample_as_image(0)
+        target_sample.resample(resample_target_img)
+        masked_t1w_target = target_sample.get_preproc_t1w(None, supermask)
+        target_sample.set_preproc_t1w(masked_t1w_target)
 
 
 class MRISample(Sample):
@@ -37,8 +37,14 @@ class MRISample(Sample):
         self.brain_masks_metadata = sample.brain_masks_metadata
         self.preproc_t1ws = sample.preproc_t1ws
 
+    def __str__(self):
+        return str(self.t1ws)
+
     def load(self, force):
         pass
+
+    def set_supermask(self, supermask):
+        self.supermask = supermask
 
     def set_preproc_t1ws(self, preproc_t1ws):
         self.preproc_t1ws = preproc_t1ws
@@ -120,6 +126,10 @@ class MRISample(Sample):
 
     def resample(self, target):
         self.t1ws = mri_image.resample_images(self.t1ws, target)
+
+    def dump(self, data_1d, filename):
+        img = mri_image.get_unmasked_t1(data_1d, self.supermask)
+        img.to_filename(filename)
 
 
 class MRISampleReference(MRISample):

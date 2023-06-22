@@ -111,7 +111,7 @@ def init_module_normality(parser):
     """
     subparser = parser.add_parser("normality", help=msg)
     init_global_args(subparser)
-    parser.add_argument(
+    subparser.add_argument(
         "--confidence",
         action="store",
         default=[0.95],
@@ -119,15 +119,6 @@ def init_module_normality(parser):
         help="Confidence",
         nargs="+",
     )
-    return subparser
-
-
-def init_module_snr(parser):
-    msg = """
-    Submodule for computing SNR
-    """
-    subparser = parser.add_parser("snr", help=msg)
-    init_global_args(subparser)
     return subparser
 
 
@@ -146,6 +137,7 @@ def init_module_stats(parser):
     """
     subparser = parser.add_parser("stats", help=msg)
     init_global_args(subparser)
+    subparser.set_defaults(output="stats")
     return subparser
 
 
@@ -222,7 +214,6 @@ analysis_modules = {
     "cross-validation": init_module_cross_validation,
     "normality": init_module_normality,
     "stats": init_module_stats,
-    "snr": init_module_snr,
     "distance": init_module_distance,
 }
 

@@ -7,14 +7,13 @@ from icecream import ic
 
 import stabilitest
 import stabilitest.model as model
-import stabilitest.mri_loader.distance as mri_distance
 import stabilitest.mri_loader.sample
 import stabilitest.normality
 import stabilitest.numpy_loader.sample
 import stabilitest.parse_args as parse_args
 import stabilitest.pprinter as pprinter
-import stabilitest.snr as snr
 from stabilitest.collect import stats_collect
+import stabilitest.statistics.stats
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
@@ -30,18 +29,21 @@ def get_sample_module(args):
 def run_kta(args):
     sample_module = get_sample_module(args)
     fvr = model.run_kta(args, sample_module)
+    parse_output(fvr)
     return fvr
 
 
 def run_loo(args):
     sample_module = get_sample_module(args)
     fvr = model.run_loo(args, sample_module)
+    parse_output(fvr)
     return fvr
 
 
 def run_test(args):
     sample_module = get_sample_module(args)
     fvr = model.run_one(args, sample_module)
+    parse_output(fvr)
     return fvr
 
 
@@ -54,22 +56,18 @@ def run_normality(args):
 def run_kfold(args):
     sample_module = get_sample_module(args)
     fvr = model.run_kfold(args, sample_module)
+    parse_output(fvr)
     return fvr
 
 
 def run_stats(args):
     sample_module = get_sample_module(args)
-    stabilitest.mri_loader.stats.compute_stats(args, sample_module)
+    stabilitest.statistics.stats.compute_stats(args, sample_module)
 
 
 def run_distance(args):
     sample_module = get_sample_module(args)
     stabilitest.mri_loader.distance.main(args, sample_module)
-
-
-def run_snr(args):
-    sample_module = get_sample_module(args)
-    stabilitest.snr.main(args, sample_module)
 
 
 cross_validation_models = {
@@ -89,7 +87,6 @@ tests = {
     "normality": run_normality,
     "stats": run_stats,
     "distance": run_distance,
-    "snr": run_snr,
 }
 
 
@@ -123,7 +120,6 @@ def main():
         return
 
     output = tests[parsed_args.analysis](parsed_args)
-    parse_output(output)
 
     stats_collect.set_name(parsed_args.output)
     stats_collect.dump()

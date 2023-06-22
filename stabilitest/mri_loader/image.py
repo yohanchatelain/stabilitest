@@ -7,7 +7,7 @@ import nibabel
 import nilearn
 import numpy as np
 import tqdm
-from nilearn.masking import apply_mask, intersect_masks
+from nilearn.masking import apply_mask, intersect_masks, unmask
 from icecream import ic
 
 import stabilitest.mri_loader.constants as mri_constants
@@ -112,7 +112,7 @@ def resample_images(sources, target):
     for source in sources:
         source = nilearn.image.resample_to_img(source, target)
         source.set_filename(source.get_filename())
-        resampled_images.append(source) 
+        resampled_images.append(source)
     return np.array(resampled_images)
 
 
@@ -193,6 +193,10 @@ def get_masked_t1(t1, mask, smooth_kernel, normalize):
         masked = normalize_ndarray(masked)
 
     return masked
+
+
+def get_unmasked_t1(t1, supermask):
+    return nilearn.masking.unmask(t1, supermask)
 
 
 def get_masked_t1_curr(margs):
