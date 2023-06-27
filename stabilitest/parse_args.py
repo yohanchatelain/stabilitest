@@ -1,6 +1,7 @@
 import argparse
 from random import choices
 
+import numpy as np
 from icecream import ic
 
 import stabilitest.mri_loader.parse_args
@@ -23,36 +24,9 @@ def init_global_args(parser):
     parser.add_argument(
         "--cpus", default=1, type=int, help="Number of CPUs for multiprocessing"
     )
-
-
-def init_module_one(parser):
-    msg = """
-    Test that the target image is included into the reference
-    interval computed from the reference sample.
-    """
-    subparser = parser.add_parser("one", help=msg)
-    init_global_args(subparser)
-    subparser.add_argument(
-        "--target-prefix", action="store", required=True, help="Target prefix path"
+    parser.add_argument(
+        "--cached", action="store_true", help="Use cached value if exist"
     )
-    subparser.add_argument(
-        "--target-dataset", action="store", required=True, help="Dataset target"
-    )
-    subparser.add_argument(
-        "--target-subject", action="store", required=True, help="Subject target"
-    )
-    subparser.add_argument(
-        "--target-template", action="store", required=True, help="Target template"
-    )
-
-
-# Domain submodules
-def init_module_smri(parser):
-    msg = """
-    Submodule for Structural MRI analysis
-    """
-    subparser = parser.add_parser("smri", help=msg)
-    init_global_args(subparser)
 
 
 def init_stats_args(parser):
@@ -220,7 +194,10 @@ analysis_modules = {
 
 def init_domain_modules(parser):
     domain_subparser = parser.add_subparsers(
-        title="Domain submodules", help="Domain submodules", dest="domain"
+        title="Domain submodules",
+        help="Domain submodules",
+        dest="domain",
+        required=True,
     )
     for domain_init in domain_modules.values():
         domain_init(parser, domain_subparser)
@@ -235,11 +212,11 @@ def init_analysis_modules(parser):
         init_domain_modules(analysis_parser)
 
 
-def parse_args():
+def parse_args(args):
     parser = argparse.ArgumentParser(description="stabilitest", prog="stabilitest")
     init_global_args(parser)
     init_analysis_modules(parser)
 
-    args, _ = parser.parse_known_args()
+    known_args, _ = parser.parse_known_args(args)
 
-    return parser, args
+    return parser, known_args

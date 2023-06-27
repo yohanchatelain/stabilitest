@@ -110,9 +110,9 @@ def resample_image(source, target):
 def resample_images(sources, target):
     resampled_images = []
     for source in sources:
-        source = nilearn.image.resample_to_img(source, target)
-        source.set_filename(source.get_filename())
-        resampled_images.append(source)
+        resampled_image = nilearn.image.resample_to_img(source, target)
+        resampled_image.set_filename(source.get_filename())
+        resampled_images.append(resampled_image)
     return np.array(resampled_images)
 
 

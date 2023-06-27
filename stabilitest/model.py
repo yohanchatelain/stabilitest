@@ -15,20 +15,20 @@ Result = namedtuple("result", "reject tests passed confidence")
 
 
 def run_tests(
-    args, target_id, reference_sample, target_sample, distribution, extra_info
+    args, reference_sample, reference_ids, target_sample, target_id, distribution, extra_info
 ):
     confidences = args.confidence
 
-    score_name = distribution.get_name()
+    distribution_name = distribution.get_name()
 
-    reference_info = reference_sample.get_info()
+    reference_info = reference_sample.get_info(reference_ids)
     target_info = target_sample.get_info(target_id)
     info = reference_info | target_info | extra_info
     target = target_sample.get_subsample_id(target_id)
 
     sample_size = reference_sample.get_size()
 
-    pprinter.print_info(score_name, sample_size, target_id, target_id)
+    pprinter.print_info(distribution_name, sample_size, target_id, target_id)
 
     # Get p-values and sort them into 1D array
     p_values = distribution.p_value(target_sample.get_subsample(target_id)).ravel()
@@ -100,6 +100,7 @@ def perform_test_per_target(
         fvr = run_tests(
             args,
             target_id=i,
+            reference_ids=reference_ids,
             distribution=distribution,
             reference_sample=reference_sample,
             target_sample=target_sample,

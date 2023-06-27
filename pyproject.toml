@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.scripts]
-stabilitest = "stabilitest.__main__:main"
+stabilitest = "stabilitest.main:main"
 
 [project.urls]
 "Bug Tracker" = "https://github.com/yohanchatelain/stabilitest/issues"

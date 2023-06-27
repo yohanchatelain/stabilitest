@@ -5,7 +5,21 @@ def init_global_args(parser):
     parser.add_argument(
         "--datatype", action="store", default="anat", choices=["anat"], help="Data type"
     )
-
+    parser.add_argument(
+        "--reference-version",
+        required=True,
+        help="Pipeline version used for computing the reference",
+    )
+    parser.add_argument(
+        "--reference-architecture",
+        required=True,
+        help="Architecture version used for computing the reference",
+    )
+    parser.add_argument(
+        "--reference-perturbation",
+        required=True,
+        help="Perturbation model used for computing the reference",
+    )
     parser.add_argument(
         "--reference-prefix",
         action="store",
@@ -64,6 +78,21 @@ def init_global_args(parser):
 
 
 def init_test_args(parser):
+    parser.add_argument(
+        "--target-version",
+        required=True,
+        help="Pipeline version used for computing the target",
+    )
+    parser.add_argument(
+        "--target-architecture",
+        required=True,
+        help="Architecture version used for computing the target",
+    )
+    parser.add_argument(
+        "--target-perturbation",
+        required=True,
+        help="Perturbation model used for computing the target",
+    )
     parser.add_argument(
         "--target-prefix", action="store", required=True, help="Target prefix path"
     )

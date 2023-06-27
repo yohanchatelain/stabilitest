@@ -4,6 +4,7 @@ import os
 import numpy as np
 
 from stabilitest.sample import Sample
+import joblib
 
 
 def preprocess(reference_sample, reference_ids, target_sample, target_ids):

@@ -14,6 +14,7 @@ def preprocess(reference_sample, reference_ids, target_sample=None, target_ids=N
 
     if target_sample:
         resample_target_img = reference_sample.get_subsample_as_image(0)
+        target_sample.set_supermask(supermask)
         target_sample.resample(resample_target_img)
         masked_t1w_target = target_sample.get_preproc_t1w(None, supermask)
         target_sample.set_preproc_t1w(masked_t1w_target)
@@ -143,11 +144,18 @@ class MRISampleReference(MRISample):
         )
 
     def get_info(self, indexes=None):
+        if indexes is None or indexes is Ellipsis:
+            sample_size = self.get_size()
+        else:
+            sample_size = len(indexes)
         info = {
+            "reference_version": self.args.reference_version,
+            "reference_perturbation": self.args.reference_perturbation,
+            "reference_architecture": self.args.reference_architecture,
             "reference_prefix": self.args.reference_prefix,
             "reference_dataset": self.args.reference_dataset,
             "reference_template": self.args.reference_template,
-            "reference_sample_size": self.get_size(),
+            "reference_sample_size": sample_size,
             "reference_fwhm": self.args.smooth_kernel,
             "reference_mask": self.args.mask_combination,
         }
@@ -159,6 +167,9 @@ class MRISampleReference(MRISample):
         return reference sample as a target sample
         """
         args = self.args
+        args.target_version = args.reference_version
+        args.target_perturbation = args.reference_perturbation
+        args.target_architecture = args.reference_architecture
         args.target_prefix = args.reference_prefix
         args.target_dataset = args.reference_dataset
         args.target_subject = args.reference_subject
@@ -180,6 +191,9 @@ class MRISampleTarget(MRISample):
 
     def get_info(self, indexes):
         info = {
+            "target_version": self.args.target_version,
+            "target_architecture": self.args.target_architecture,
+            "target_perturbation": self.args.target_perturbation,
             "target_prefix": self.args.target_prefix,
             "target_dataset": self.args.target_dataset,
             "target_template": self.args.target_template,
