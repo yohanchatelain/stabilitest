@@ -137,5 +137,5 @@ def compute_distance(args):
     df.to_csv(f"{filename}-table.csv")
 
 
-def main(args, sample_module):
+def main(args, sample_module, collector):
     compute_distance(args)

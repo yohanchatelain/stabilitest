@@ -9,7 +9,7 @@ import stabilitest.normality
 import stabilitest.numpy_loader.sample
 import stabilitest.parse_args as parse_args
 import stabilitest.pprinter as pprinter
-from stabilitest.collect import stats_collect
+from stabilitest.collect import Collector
 import stabilitest.statistics.stats
 
 
@@ -24,48 +24,47 @@ def get_sample_module(args):
     raise Exception(f"Domain not found {args.domain}")
 
 
-def run_kta(args):
+def run_kta(args, collector):
     sample_module = get_sample_module(args)
-    fvr = model.run_kta(args, sample_module)
+    fvr = model.run_kta(args, sample_module, collector)
     parse_output(fvr)
     return fvr
 
 
-def run_loo(args):
+def run_loo(args, collector):
     sample_module = get_sample_module(args)
-    fvr = model.run_loo(args, sample_module)
+    fvr = model.run_loo(args, sample_module, collector)
     parse_output(fvr)
     return fvr
 
 
-def run_test(args):
+def run_test(args, collector):
     sample_module = get_sample_module(args)
-    fvr = model.run_one(args, sample_module)
+    fvr = model.run_one(args, sample_module, collector)
     parse_output(fvr)
     return fvr
 
 
-def run_normality(args):
+def run_normality(args, collector):
     sample_module = get_sample_module(args)
-    normality = stabilitest.normality.run_normality_test(args, sample_module)
-    print(normality)
+    stabilitest.normality.run_normality_test(args, sample_module, collector)
 
 
-def run_kfold(args):
+def run_kfold(args, collector):
     sample_module = get_sample_module(args)
-    fvr = model.run_kfold(args, sample_module)
+    fvr = model.run_kfold(args, sample_module, collector)
     parse_output(fvr)
     return fvr
 
 
-def run_stats(args):
+def run_stats(args, collector):
     sample_module = get_sample_module(args)
-    stabilitest.statistics.stats.compute_stats(args, sample_module)
+    stabilitest.statistics.stats.compute_stats(args, sample_module, collector)
 
 
-def run_distance(args):
+def run_distance(args, collector):
     sample_module = get_sample_module(args)
-    stabilitest.mri_loader.distance.main(args, sample_module)
+    stabilitest.mri_loader.distance.main(args, sample_module, collector)
 
 
 cross_validation_models = {
@@ -75,8 +74,8 @@ cross_validation_models = {
 }
 
 
-def run_cross_validation(args):
-    return cross_validation_models[args.model](args)
+def run_cross_validation(args, collector):
+    return cross_validation_models[args.model](args, collector)
 
 
 tests = {
@@ -117,7 +116,6 @@ def main(args=None):
         parser.print_help()
         return
 
-    output = tests[parsed_args.analysis](parsed_args)
-
-    stats_collect.set_name(parsed_args.output)
-    stats_collect.dump()
+    collector = Collector(parsed_args.output)
+    tests[parsed_args.analysis](parsed_args, collector)
+    collector.dump()

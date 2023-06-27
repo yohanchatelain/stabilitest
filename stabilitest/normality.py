@@ -1,15 +1,8 @@
-import nibabel
-import nilearn
 import numpy as np
-import scipy
-import tqdm
 from joblib import Parallel, delayed
 from scipy import stats
 
-import stabilitest.mri_loader.image as image
-import stabilitest.pprinter as pprinter
 import stabilitest.statistics.multiple_testing as mt
-from stabilitest.collect import stats_collect
 
 
 def perform_test_on_voxel(voxel_values):
@@ -17,7 +10,7 @@ def perform_test_on_voxel(voxel_values):
     return p
 
 
-def test_normality(args, sample):
+def test_normality(args, sample, collector):
     confidences = args.confidence
     subsample = sample.get_subsample()
     data_size = subsample.shape[1:]
@@ -42,7 +35,7 @@ def test_normality(args, sample):
         alpha = 1 - confidence
 
         for method in methods:
-            nb_reject, size, passed = method("", alpha, p_values)
+            nb_reject, size, _ = method("", alpha, p_values)
             ratio = nb_reject / size
 
             print(f"Method {method.__name__}")
@@ -51,10 +44,10 @@ def test_normality(args, sample):
             print(f"non-normal data ratio  = {ratio:.2e} [{ratio*100:f}%]")
 
             info = sample.get_info()
-            stats_collect.append(**info)
+            collector.append(**info)
 
 
-def run_normality_test(args, sample_module):
+def run_normality_test(args, sample_module, collector):
     """
     Run the non-normality test for the given sample
     """
@@ -62,4 +55,4 @@ def run_normality_test(args, sample_module):
     sample = sample_module.get_reference_sample(args)
     sample.load()
     sample_module.preprocess(sample, ...)
-    test_normality(args, sample)
+    test_normality(args, sample, collector)

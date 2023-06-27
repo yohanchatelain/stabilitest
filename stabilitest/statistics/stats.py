@@ -4,7 +4,7 @@ import significantdigits
 from significantdigits import Error, Method
 
 
-def compute_stats(args, sample_module):
+def compute_stats(args, sample_module, collector):
     reference_sample = sample_module.get_reference_sample(args)
     reference_sample.load()
     sample_module.preprocess(reference_sample, ...)
@@ -24,6 +24,22 @@ def compute_stats(args, sample_module):
         error=Error.Relative,
         method=Method.CNH,
     )
+
+    info = {}
+    for name, stat in {
+        "max": _max,
+        "min": _min,
+        "median": _median,
+        "mean": _mean,
+        "std": _std,
+    }.items():
+        info[f"{name}_max"] = stat.max()
+        info[f"{name}_min"] = stat.min()
+        info[f"{name}_median"] = stat.median()
+        info[f"{name}_mean"] = stat.mean()
+        info[f"{name}_std"] = stat.std()
+
+    collector.append(info)
 
     filename = args.output
 

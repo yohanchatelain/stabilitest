@@ -1,7 +1,7 @@
 import pickle
 
 
-class Statistic:
+class Collector:
     def __init__(self, name="output.pkl"):
         self._data = []
         self._name = name
@@ -23,6 +23,3 @@ class Statistic:
     def dump(self):
         with open(self._name, "wb") as fo:
             pickle.dump(self._data, fo)
-
-
-stats_collect = Statistic()

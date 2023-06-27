@@ -7,7 +7,7 @@ from sklearn.model_selection import KFold
 import stabilitest.pprinter as pprinter
 import stabilitest.statistics.distribution as dist
 import stabilitest.statistics.multiple_testing as mt
-from stabilitest.collect import stats_collect
+from stabilitest.collect import Collector
 
 from collections import namedtuple
 
@@ -15,7 +15,14 @@ Result = namedtuple("result", "reject tests passed confidence")
 
 
 def run_tests(
-    args, reference_sample, reference_ids, target_sample, target_id, distribution, extra_info
+    args,
+    reference_sample,
+    reference_ids,
+    target_sample,
+    target_id,
+    distribution,
+    extra_info,
+    collector,
 ):
     confidences = args.confidence
 
@@ -54,7 +61,7 @@ def run_tests(
                 "tests": nb_test,
                 "method": method.__name__,
             }
-            stats_collect.append(**info, **local_info)
+            collector.append(**info, **local_info)
 
             results[method.__name__, confidence] = Result(
                 reject=nb_reject, tests=nb_test, passed=passed, confidence=confidence
@@ -72,11 +79,13 @@ def perform_test_per_target(
     target_sample,
     target_ids,
     distribution,
+    collector,
     nb_round=None,
     kth_round=None,
 ):
     """
-    Compute the failing-voxels ratio (FVR) for each target image in targets for the given methods.
+    Compute the failing-voxels ratio (FVR) for each target image
+    in targets for the given methods.
     Args:
         @reference_sample: sample of reference
         @reference_ids: subsample ids
@@ -105,6 +114,7 @@ def perform_test_per_target(
             reference_sample=reference_sample,
             target_sample=target_sample,
             extra_info=extra_info,
+            collector=collector,
         )
         fvr_per_target[target_sample.get_subsample_id(i)] = fvr
 
@@ -112,7 +122,13 @@ def perform_test_per_target(
 
 
 def perform_kfold(
-    args, sample_module, reference_sample, target_sample, distribution, nb_rounds
+    args,
+    sample_module,
+    reference_sample,
+    target_sample,
+    distribution,
+    nb_rounds,
+    collector,
 ):
     """
     Compute the FVR by splitting the reference set in two training/testing sets.
@@ -141,6 +157,7 @@ def perform_kfold(
             target_sample=target_sample,
             target_ids=test_id,
             distribution=distribution,
+            collector=collector,
             nb_round=nb_rounds,
             kth_round=i,
         )
@@ -156,7 +173,7 @@ def perform_kfold(
     return fvr_list
 
 
-def run_kta(args, sample_module):
+def run_kta(args, sample_module, collector):
     sample = sample_module.get_reference_sample(args)
     sample.load()
 
@@ -176,12 +193,13 @@ def run_kta(args, sample_module):
         distribution=distribution,
         nb_round=1,
         kth_round=1,
+        collector=collector,
     )
 
     return [fvr]
 
 
-def run_one(args, sample_module):
+def run_one(args, sample_module, collector):
     reference_sample = sample_module.get_reference_sample(args)
     target_sample = sample_module.get_target_sample(args)
     reference_sample.load()
@@ -204,12 +222,13 @@ def run_one(args, sample_module):
         distribution=distribution,
         nb_round=1,
         kth_round=1,
+        collector=collector,
     )
 
     return [fvr]
 
 
-def run_loo(args, sample_module):
+def run_loo(args, sample_module, collector):
     sample = sample_module.get_reference_sample(args)
     sample.load()
 
@@ -224,12 +243,13 @@ def run_loo(args, sample_module):
         target_sample=sample.as_target(),
         distribution=distribution,
         nb_rounds=sample.get_size(),
+        collector=collector,
     )
 
     return fvr
 
 
-def run_kfold(args, sample_module):
+def run_kfold(args, sample_module, collector):
     sample = sample_module.get_reference_sample(args)
     sample.load()
 
@@ -244,6 +264,7 @@ def run_kfold(args, sample_module):
         target_sample=sample.as_target(),
         distribution=distribution,
         nb_rounds=args.k_fold_rounds,
+        collector=collector,
     )
 
     return fvr
