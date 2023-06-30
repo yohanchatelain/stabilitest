@@ -130,7 +130,7 @@ def normalize_image(image):
 
 def get_paths(prefix, dataset):
     regexp = os.path.join(prefix, f"*{dataset}*", "**")
-    paths = glob.glob(regexp)
+    paths = glob.glob(regexp, recursive=True)
     return paths
 
 
