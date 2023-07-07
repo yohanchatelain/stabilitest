@@ -19,6 +19,7 @@ dependencies = [
     "niworkflows",
     "statsmodels",
     "icecream",
+    "joblib",
 ]
 
 [project.scripts]
