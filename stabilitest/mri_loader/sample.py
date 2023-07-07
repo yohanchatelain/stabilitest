@@ -150,10 +150,11 @@ class MRISampleReference(MRISample):
             sample_size = len(indexes)
         info = {
             "reference_version": self.args.reference_version,
-            "reference_perturbation": self.args.reference_perturbation,
             "reference_architecture": self.args.reference_architecture,
+            "reference_perturbation": self.args.reference_perturbation,
             "reference_prefix": self.args.reference_prefix,
             "reference_dataset": self.args.reference_dataset,
+            "reference_subject": self.args.reference_subject,
             "reference_template": self.args.reference_template,
             "reference_sample_size": sample_size,
             "reference_fwhm": self.args.smooth_kernel,
@@ -196,6 +197,7 @@ class MRISampleTarget(MRISample):
             "target_perturbation": self.args.target_perturbation,
             "target_prefix": self.args.target_prefix,
             "target_dataset": self.args.target_dataset,
+            "target_subject": self.args.target_subject,
             "target_template": self.args.target_template,
             "target_filename": self.get_subsample_id(indexes),
         }
