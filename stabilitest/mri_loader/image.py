@@ -209,7 +209,7 @@ def get_masked_t1_curr(margs):
 def get_masked_t1s(args, t1s, supermask):
     results = []
 
-    n_jobs = min(args.cpu, len(t1s))
+    n_jobs = min(args.cpus, len(t1s))
     with tqdm.tqdm(desc="Masking reference", unit="image", total=len(t1s)) as pbar:
         for image in joblib.Parallel(n_jobs=n_jobs, batch_size=1)(
             joblib.delayed(get_masked_t1)(
