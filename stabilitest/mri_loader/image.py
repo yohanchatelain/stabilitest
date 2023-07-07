@@ -1,14 +1,14 @@
 import glob
 import logging
 import os
-from multiprocessing import Pool
+import joblib
 
 import nibabel
 import nilearn
 import numpy as np
 import tqdm
-from nilearn.masking import apply_mask, intersect_masks, unmask
 from icecream import ic
+from nilearn.masking import apply_mask, intersect_masks, unmask
 
 import stabilitest.mri_loader.constants as mri_constants
 import stabilitest.pprinter as mrip
@@ -208,14 +208,17 @@ def get_masked_t1_curr(margs):
 
 def get_masked_t1s(args, t1s, supermask):
     results = []
-    with Pool(min(args.cpus, len(t1s))) as p:
-        nt1s = len(t1s)
-        map_args = zip(t1s, [supermask] * nt1s, [args] * nt1s)
 
-        with tqdm.tqdm(desc="Masking reference", unit="image", total=nt1s) as pbar:
-            for image in p.imap(get_masked_t1_curr, map_args):
-                pbar.update()
-                results.append(image)
+    n_jobs = min(args.cpu, len(t1s))
+    with tqdm.tqdm(desc="Masking reference", unit="image", total=len(t1s)) as pbar:
+        for image in joblib.Parallel(n_jobs=n_jobs, batch_size=1)(
+            joblib.delayed(get_masked_t1)(
+                t1, supermask, args.smooth_kernel, args.normalize
+            )
+            for t1 in t1s
+        ):
+            pbar.update()
+            results.append(image)
 
     return np.stack(results)
 
