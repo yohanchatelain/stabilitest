@@ -199,7 +199,7 @@ def run_kta(args, sample_module, collector):
     return [fvr]
 
 
-def run_one(args, sample_module, collector):
+def run_single_test(args, sample_module, collector):
     reference_sample = sample_module.get_reference_sample(args)
     target_sample = sample_module.get_target_sample(args)
     reference_sample.load()

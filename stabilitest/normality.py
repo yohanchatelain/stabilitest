@@ -54,5 +54,5 @@ def run_normality_test(args, sample_module, collector):
 
     sample = sample_module.get_reference_sample(args)
     sample.load()
-    sample_module.preprocess(sample, ...)
+    sample_module.preprocess(sample)
     test_normality(args, sample, collector)

@@ -40,7 +40,7 @@ def run_loo(args, collector):
 
 def run_test(args, collector):
     sample_module = get_sample_module(args)
-    fvr = model.run_one(args, sample_module, collector)
+    fvr = model.run_single_test(args, sample_module, collector)
     parse_output(fvr)
     return fvr
 
@@ -79,7 +79,7 @@ def run_cross_validation(args, collector):
 
 
 tests = {
-    "test": run_test,
+    "single-test": run_test,
     "cross-validation": run_cross_validation,
     "normality": run_normality,
     "stats": run_stats,

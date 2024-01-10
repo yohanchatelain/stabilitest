@@ -67,11 +67,11 @@ def init_multiple_comparision_tests_args(parser):
 
 
 # Global submodules (to load before domain submodules)
-def init_module_test(parser):
+def init_module_single_test(parser):
     msg = """
     Submodule for single test
     """
-    subparser = parser.add_parser("test", help=msg)
+    subparser = parser.add_parser("single-test", help=msg)
     init_global_args(subparser)
     init_stats_args(subparser)
     init_multiple_comparision_tests_args(subparser)
@@ -117,7 +117,6 @@ def init_module_stats(parser):
 
 def _init_kta_args(parser):
     msg = """
-    
     Cross-validation that tests that the reference interval computed contains each
     reference observation. The reference interval is computed by using the all
     observations (keep-them-all), including the one being tested.
@@ -184,7 +183,7 @@ domain_modules = {
 }
 
 analysis_modules = {
-    "test": init_module_test,
+    "single-test": init_module_single_test,
     "cross-validation": init_module_cross_validation,
     "normality": init_module_normality,
     "stats": init_module_stats,

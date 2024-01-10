@@ -1,4 +1,3 @@
-import nilearn
 import numpy as np
 import significantdigits
 from significantdigits import Error, Method
@@ -19,7 +18,7 @@ def compute_stats(args, sample_module, collector):
     _sig = significantdigits.significant_digits(
         array=data,
         reference=_mean,
-        base=2,
+        basis=2,
         axis=0,
         error=Error.Relative,
         method=Method.CNH,
@@ -35,16 +34,15 @@ def compute_stats(args, sample_module, collector):
     }.items():
         info[f"{name}_max"] = stat.max()
         info[f"{name}_min"] = stat.min()
-        info[f"{name}_median"] = stat.median()
+        info[f"{name}_median"] = np.median(stat)
         info[f"{name}_mean"] = stat.mean()
         info[f"{name}_std"] = stat.std()
 
-    collector.append(info)
+    collector.append(**info)
 
     filename = args.output
 
     def save(x, name):
-        print(f"Unmask {filename}")
         print(f"Save NumPy {name}")
         _filename = f"{filename}_{name}"
         np.save(filename, x)

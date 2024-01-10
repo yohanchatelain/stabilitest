@@ -6,20 +6,6 @@ import stabilitest.mri_loader.image as mri_image
 from stabilitest.sample import Sample
 
 
-def preprocess(reference_sample, reference_ids, target_sample=None, target_ids=None):
-    supermask = reference_sample.compute_supermask(reference_ids)
-    reference_sample.set_supermask(supermask)
-    masked_t1w_ref = reference_sample.get_preproc_t1w(reference_ids, supermask)
-    reference_sample.set_preproc_t1w(masked_t1w_ref)
-
-    if target_sample:
-        resample_target_img = reference_sample.get_subsample_as_image(0)
-        target_sample.set_supermask(supermask)
-        target_sample.resample(resample_target_img)
-        masked_t1w_target = target_sample.get_preproc_t1w(None, supermask)
-        target_sample.set_preproc_t1w(masked_t1w_target)
-
-
 class MRISample(Sample):
     def __init__(self, args):
         self.args = args
@@ -27,8 +13,9 @@ class MRISample(Sample):
         self.t1ws_metadata = None
         self.brain_masks = None
         self.brain_masks_metadata = None
+        self._supermask = None
         # T1ws masked, smoothed and min-max scaled
-        self.preproc_t1ws = None
+        self._preproc_t1ws = None
 
     def copy(self, sample):
         self.args = sample.args
@@ -36,7 +23,7 @@ class MRISample(Sample):
         self.t1ws_metadata = sample.t1ws_metadata
         self.brain_masks = sample.brain_masks
         self.brain_masks_metadata = sample.brain_masks_metadata
-        self.preproc_t1ws = sample.preproc_t1ws
+        self.preprocessed_t1ws = sample.preproc_t1ws
 
     def __str__(self):
         return str(self.t1ws)
@@ -44,11 +31,25 @@ class MRISample(Sample):
     def load(self, force):
         pass
 
-    def set_supermask(self, supermask):
-        self.supermask = supermask
+    @property
+    def supermask(self):
+        return self._supermask
 
-    def set_preproc_t1ws(self, preproc_t1ws):
-        self.preproc_t1ws = preproc_t1ws
+    @supermask.setter
+    def supermask(self, supermask):
+        self._supermask = supermask
+
+    @property
+    def preprocessed_t1ws(self):
+        return self._preproc_t1ws
+
+    @preprocessed_t1ws.setter
+    def preprocessed_t1ws(self, preproc_t1ws):
+        self._preproc_t1ws = preproc_t1ws
+
+    def preprocess_t1w(self, indexes, supermask):
+        t1ws = self.t1ws[self.__parse_index(indexes)]
+        return mri_image.get_masked_t1s(self.args, t1ws, supermask)
 
     def get_size(self):
         return self.t1ws.shape[0]
@@ -88,17 +89,16 @@ class MRISample(Sample):
 
     def compute_supermask(self, indexes):
         brain_masks = self.brain_masks[self.__parse_index(indexes)]
-        return mri_image.combine_mask(brain_masks, self.args.mask_combination)
+        self.supermask = mri_image.combine_mask(brain_masks, self.args.mask_combination)
 
-    def get_preproc_t1w(self, indexes, supermask):
-        t1ws = self.t1ws[self.__parse_index(indexes)]
-        return mri_image.get_masked_t1s(self.args, t1ws, supermask)
+    # def get_subsample_as_image(self, indexes):
+    #     return self.t1ws[self.__parse_index(indexes)]
 
-    def get_subsample_as_image(self, indexes):
+    def __getitem__(self, indexes):
         return self.t1ws[self.__parse_index(indexes)]
 
     def set_preproc_t1w(self, t1w):
-        self.preproc_t1ws = t1w
+        self.preprocessed_t1ws = t1w
 
     def __parse_index(self, indexes):
         if indexes is None:
@@ -116,7 +116,7 @@ class MRISample(Sample):
             raise Exception(f"Unknown index type {type(indexes)}")
 
     def get_subsample(self, indexes=None):
-        return self.preproc_t1ws[self.__parse_index(indexes)]
+        return self.preprocessed_t1ws[self.__parse_index(indexes)]
 
     def get_subsample_id(self, indexes=None):
         meta = self.t1ws_metadata[self.__parse_index(indexes)]
@@ -211,3 +211,25 @@ def get_reference_sample(args):
 
 def get_target_sample(args):
     return MRISampleTarget(args)
+
+
+def preprocess(
+    reference_sample: MRISample, reference_ids=None, target_sample=None, target_ids=None
+):
+    """
+    Preprocess reference and target samples
+    """
+    if reference_ids is None:
+        reference_ids = list(range(reference_sample.get_size()))
+
+    reference_sample.supermask = reference_sample.compute_supermask(reference_ids)
+    reference_sample.preprocessed_t1ws = reference_sample.preprocess_t1w(
+        reference_ids, reference_sample.supermask
+    )
+
+    if target_sample:
+        target_sample.supermask = reference_sample.supermask
+        target_sample.resample(reference_sample[0])
+        target_sample.preprocessed_t1ws = target_sample.preprocess_t1w(
+            None, reference_sample.supermask
+        )

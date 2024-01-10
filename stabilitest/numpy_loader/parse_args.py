@@ -1,6 +1,3 @@
-import icecream as ic
-
-
 def init_global_args(parser):
     parser.add_argument("--reference", required=True, help="Reference path")
     parser.add_argument(
@@ -18,5 +15,5 @@ def init_module(parser, subparser):
     numpy_parser = subparser.add_parser("numpy")
     init_global_args(numpy_parser)
 
-    if parser.prog == "stabilitest test":
+    if parser.prog == "stabilitest single-test":
         init_test_args(numpy_parser)

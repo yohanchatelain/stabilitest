@@ -4,10 +4,11 @@ import os
 import numpy as np
 
 from stabilitest.sample import Sample
-import joblib
 
 
-def preprocess(reference_sample, reference_ids, target_sample, target_ids):
+def preprocess(
+    reference_sample, reference_ids=None, target_sample=None, target_ids=None
+):
     pass
 
 
@@ -60,6 +61,9 @@ class NumpySample(Sample):
 
     def load(self, force):
         pass
+
+    def dump(self, data_1d, filename):
+        np.save(filename, data_1d)
 
 
 class NumpySampleReference(NumpySample):
