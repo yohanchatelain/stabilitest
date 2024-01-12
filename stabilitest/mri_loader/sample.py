@@ -1,14 +1,60 @@
-import nibabel
+from distutils import extension
 import numpy as np
 from icecream import ic
+import json
+import faker
+import os
 
 import stabilitest.mri_loader.image as mri_image
 from stabilitest.sample import Sample
 
 
+def configurator(args):
+    fake = faker.Faker()
+    config = {
+        "general": {
+            "output": fake.file_name(extension="pkl"),
+            "verbose": fake.boolean(),
+            "cpus": fake.pyint(),
+            "cached": fake.boolean(),
+        },
+        "confidence": [
+            fake.pyfloat(left_digits=1, right_digits=4, min_value=0, max_value=1)
+        ],
+        "distribution": [fake.word()],
+        "parallel-fitting": fake.boolean(),
+        "multiple-comparison-tests": [fake.word()],
+        "model": fake.word(),
+        "k-fold-rounds": fake.pyint(),
+        "reference": {
+            "prefix": os.path.dirname(fake.file_path(depth=3)),
+            "dataset": fake.numerify("ds######"),
+            "subject": fake.numerify("sub-######"),
+            "template": fake.numerify("MNI###NLin###Asym"),
+            "version": fake.numerify("v#.#.#"),
+            "architecture": fake.word(),
+            "perturbation": fake.word(),
+        },
+        "target": {
+            "prefix": os.path.dirname(fake.file_path(depth=3)),
+            "dataset": fake.numerify("ds######"),
+            "subject": fake.numerify("sub-######"),
+            "template": fake.numerify("MNI###NLin###Asym"),
+            "version": fake.numerify("v#.#.#"),
+            "architecture": fake.word(),
+            "perturbation": fake.word(),
+        },
+        "normalize": fake.boolean(),
+        "mask-combination": fake.word(),
+        "smooth-kernel": [fake.pyint()],
+    }
+    return json.dumps(config, indent=2)
+
+
 class MRISample(Sample):
     def __init__(self, args):
         self.args = args
+        self._config = self._load_config(args.config_file)
         self.t1ws = None
         self.t1ws_metadata = None
         self.brain_masks = None
@@ -17,8 +63,12 @@ class MRISample(Sample):
         # T1ws masked, smoothed and min-max scaled
         self._preproc_t1ws = None
 
+    def _load_config(self, config_file):
+        return json.load(open(config_file))
+
     def copy(self, sample):
         self.args = sample.args
+        self.config_file = sample.config_file
         self.t1ws = sample.t1ws
         self.t1ws_metadata = sample.t1ws_metadata
         self.brain_masks = sample.brain_masks
@@ -47,14 +97,29 @@ class MRISample(Sample):
     def preprocessed_t1ws(self, preproc_t1ws):
         self._preproc_t1ws = preproc_t1ws
 
-    def preprocess_t1w(self, indexes, supermask):
+    def _preprocess_t1w(self, indexes, supermask):
+        if self.t1ws is None:
+            raise Exception("Sample not loaded")
         t1ws = self.t1ws[self.__parse_index(indexes)]
         return mri_image.get_masked_t1s(self.args, t1ws, supermask)
 
-    def get_size(self):
+    @property
+    def size(self):
+        if self.t1ws is None:
+            raise Exception("Sample not loaded")
         return self.t1ws.shape[0]
 
+    @property
+    def data(self):
+        return self.preprocessed_t1ws
+
+    @property
+    def metadata(self):
+        return self.t1ws_metadata
+
     def get_observation_shape(self):
+        if self.t1ws is None:
+            raise Exception("Sample not loaded")
         return self.t1ws.shape[1:]
 
     def _get_metadata(self, nifti):
@@ -88,17 +153,20 @@ class MRISample(Sample):
         self._load_brain_mask(prefix, dataset, subject, template, datatype)
 
     def compute_supermask(self, indexes):
+        if self.brain_masks is None:
+            raise Exception("Brain masks sample not loaded")
         brain_masks = self.brain_masks[self.__parse_index(indexes)]
-        self.supermask = mri_image.combine_mask(brain_masks, self.args.mask_combination)
+        return mri_image.combine_mask(brain_masks, self.args.mask_combination)
 
-    # def get_subsample_as_image(self, indexes):
-    #     return self.t1ws[self.__parse_index(indexes)]
-
-    def __getitem__(self, indexes):
+    def _get_raw_data_item(self, indexes):
+        if self.t1ws is None:
+            raise Exception("Sample not loaded")
         return self.t1ws[self.__parse_index(indexes)]
 
-    def set_preproc_t1w(self, t1w):
-        self.preprocessed_t1ws = t1w
+    # def __getitem__(self, indexes):
+    #     if self.t1ws is None:
+    #         raise Exception("Sample not loaded")
+    #     return self.t1ws[self.__parse_index(indexes)]
 
     def __parse_index(self, indexes):
         if indexes is None:
@@ -116,9 +184,13 @@ class MRISample(Sample):
             raise Exception(f"Unknown index type {type(indexes)}")
 
     def get_subsample(self, indexes=None):
+        if self.preprocessed_t1ws is None:
+            raise Exception("Sample not loaded")
         return self.preprocessed_t1ws[self.__parse_index(indexes)]
 
     def get_subsample_id(self, indexes=None):
+        if self.t1ws_metadata is None:
+            raise Exception("Sample not loaded")
         meta = self.t1ws_metadata[self.__parse_index(indexes)]
         if isinstance(meta, np.ndarray):
             return [m["filename"] for m in meta]
@@ -135,6 +207,7 @@ class MRISample(Sample):
 
 class MRISampleReference(MRISample):
     def load(self, force=False):
+        ic("Load reference sample")
         self._load_t1_and_brain_maks(
             prefix=self.args.reference_prefix,
             dataset=self.args.reference_dataset,
@@ -145,7 +218,7 @@ class MRISampleReference(MRISample):
 
     def get_info(self, indexes=None):
         if indexes is None or indexes is Ellipsis:
-            sample_size = self.get_size()
+            sample_size = self.size
         else:
             sample_size = len(indexes)
         info = {
@@ -182,6 +255,7 @@ class MRISampleReference(MRISample):
 
 class MRISampleTarget(MRISample):
     def load(self, force=False):
+        ic("Load target sample")
         self._load_t1_and_brain_maks(
             prefix=self.args.target_prefix,
             dataset=self.args.target_dataset,
@@ -220,16 +294,16 @@ def preprocess(
     Preprocess reference and target samples
     """
     if reference_ids is None:
-        reference_ids = list(range(reference_sample.get_size()))
+        reference_ids = list(range(reference_sample.size))
 
     reference_sample.supermask = reference_sample.compute_supermask(reference_ids)
-    reference_sample.preprocessed_t1ws = reference_sample.preprocess_t1w(
+    reference_sample.preprocessed_t1ws = reference_sample._preprocess_t1w(
         reference_ids, reference_sample.supermask
     )
 
     if target_sample:
         target_sample.supermask = reference_sample.supermask
-        target_sample.resample(reference_sample[0])
-        target_sample.preprocessed_t1ws = target_sample.preprocess_t1w(
+        target_sample.resample(reference_sample._get_raw_data_item(0))
+        target_sample.preprocessed_t1ws = target_sample._preprocess_t1w(
             None, reference_sample.supermask
         )

@@ -1,13 +1,12 @@
 import logging
 
 import numpy as np
-from icecream import ic
 from sklearn.model_selection import KFold
+import tqdm
 
 import stabilitest.pprinter as pprinter
 import stabilitest.statistics.distribution as dist
 import stabilitest.statistics.multiple_testing as mt
-from stabilitest.collect import Collector
 
 from collections import namedtuple
 
@@ -33,7 +32,7 @@ def run_tests(
     info = reference_info | target_info | extra_info
     target = target_sample.get_subsample_id(target_id)
 
-    sample_size = reference_sample.get_size()
+    sample_size = reference_sample.size
 
     pprinter.print_info(distribution_name, sample_size, target_id, target_id)
 
@@ -43,30 +42,24 @@ def run_tests(
 
     methods = mt.get_methods(args)
 
-    def print_sep():
-        return print(pprinter.sep_h3) if len(methods) > 1 else lambda: None
-
     results = {}
 
     for method in methods:
+        method_name = method.__name__.replace("_", "-")
         for confidence in confidences:
             alpha = 1 - confidence
-            if pprinter.verbose():
-                print_sep()
-
             nb_reject, nb_test, passed = method(target, alpha, p_values)
             local_info = {
                 "confidence": confidence,
                 "reject": nb_reject,
                 "tests": nb_test,
-                "method": method.__name__,
+                "method": method_name,
             }
             collector.append(**info, **local_info)
 
-            results[method.__name__, confidence] = Result(
+            results[method_name, confidence] = Result(
                 reject=nb_reject, tests=nb_test, passed=passed, confidence=confidence
             )
-        print_sep()
 
     return results
 
@@ -139,15 +132,15 @@ def perform_kfold(
     Return a list of FVR for each round
     """
 
-    msg = f"{nb_rounds}-fold failing-voxels count"
-    pprinter.print_sep1(f"{msg:^40}")
+    # msg = f"{nb_rounds}-fold failing-voxels count"
+    # pprinter.print_sep1(f"{msg:^40}")
 
     kfold = KFold(nb_rounds)
     fvr_list = []
 
     def compute_k_fold_round(i, train_id, test_id):
-        round_msg = f"Round {i}"
-        pprinter.print_sep2(f"{round_msg:^40}")
+        # round_msg = f"Round {i}"
+        # pprinter.print_sep2(f"{round_msg:^40}")
 
         fvr = perform_test_per_target(
             args,
@@ -163,11 +156,13 @@ def perform_kfold(
         )
         return fvr
 
-    sample_ids = list(range(reference_sample.get_size()))
+    sample_ids = list(range(reference_sample.size))
 
     fvr_list = [
         compute_k_fold_round(i, train_id, test_id)
-        for i, (train_id, test_id) in enumerate(kfold.split(sample_ids), start=1)
+        for i, (train_id, test_id) in tqdm.tqdm(
+            enumerate(kfold.split(sample_ids), start=1), total=nb_rounds, unit="round"
+        )
     ]
 
     return fvr_list
@@ -179,7 +174,7 @@ def run_kta(args, sample_module, collector):
 
     distribution = dist.get_distribution(args)
 
-    sample_size = sample.get_size()
+    sample_size = sample.size
     reference_subsample_ids = list(range(sample_size))
     target_subsample_ids = list(range(sample_size))
 
@@ -205,12 +200,12 @@ def run_single_test(args, sample_module, collector):
     reference_sample.load()
     target_sample.load()
 
-    reference_subsample_ids = list(range(reference_sample.get_size()))
-    target_subsample_ids = list(range(target_sample.get_size()))
+    reference_subsample_ids = list(range(reference_sample.size))
+    target_subsample_ids = list(range(target_sample.size))
 
     distribution = dist.get_distribution(args)
 
-    logging.info(f"Sample size: {reference_sample.get_size()}")
+    logging.info(f"Sample size: {reference_sample.size}")
 
     fvr = perform_test_per_target(
         args,
@@ -234,7 +229,7 @@ def run_loo(args, sample_module, collector):
 
     distribution = dist.get_distribution(args)
 
-    logging.info(f"Sample size: {sample.get_size()}")
+    logging.info(f"Sample size: {sample.size}")
 
     fvr = perform_kfold(
         args,
@@ -242,7 +237,7 @@ def run_loo(args, sample_module, collector):
         reference_sample=sample,
         target_sample=sample.as_target(),
         distribution=distribution,
-        nb_rounds=sample.get_size(),
+        nb_rounds=sample.size,
         collector=collector,
     )
 
@@ -255,7 +250,7 @@ def run_kfold(args, sample_module, collector):
 
     distribution = dist.get_distribution(args)
 
-    logging.info(f"Sample size: {sample.get_size()}")
+    logging.info(f"Sample size: {sample.size}")
 
     fvr = perform_kfold(
         args,

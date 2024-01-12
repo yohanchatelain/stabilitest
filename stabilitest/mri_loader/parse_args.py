@@ -1,48 +1,7 @@
-from icecream import ic
-
-
 def init_global_args(parser):
+    parser.add_argument("--config-file", action="store", default=None)
     parser.add_argument(
         "--datatype", action="store", default="anat", choices=["anat"], help="Data type"
-    )
-    parser.add_argument(
-        "--reference-version",
-        required=True,
-        help="Pipeline version used for computing the reference",
-    )
-    parser.add_argument(
-        "--reference-architecture",
-        required=True,
-        help="Architecture version used for computing the reference",
-    )
-    parser.add_argument(
-        "--reference-perturbation",
-        required=True,
-        help="Perturbation model used for computing the reference",
-    )
-    parser.add_argument(
-        "--reference-prefix",
-        action="store",
-        required=True,
-        help="Reference prefix path",
-    )
-    parser.add_argument(
-        "--reference-dataset",
-        action="store",
-        required=True,
-        help="Dataset reference",
-    )
-    parser.add_argument(
-        "--reference-subject",
-        action="store",
-        required=True,
-        help="Subject reference",
-    )
-    parser.add_argument(
-        "--reference-template",
-        action="store",
-        required=True,
-        help="Reference template",
     )
 
     parser.add_argument(
@@ -59,15 +18,16 @@ def init_global_args(parser):
         "--mask-combination",
         action="store",
         type=str,
-        choices=["union", "intersection", "map"],
+        choices=["union", "intersection", "identity"],
         default="union",
-        help="Method to combine brain mask (map applies each brain mask to the image repetition)",
+        help="Method to combine brain mask (default %(default)s)\n'identity' uses each voxel mask",
     )
 
     parser.add_argument(
         "--normalize",
+        "--min-max-normalization",
         action="store_true",
-        help="Normalize the T1w to have [0,1] intensities",
+        help="Min-max normalization to have voxel intensities between [0,1]",
     )
 
     parser.add_argument(
@@ -77,39 +37,7 @@ def init_global_args(parser):
     )
 
 
-def init_test_args(parser):
-    parser.add_argument(
-        "--target-version",
-        required=True,
-        help="Pipeline version used for computing the target",
-    )
-    parser.add_argument(
-        "--target-architecture",
-        required=True,
-        help="Architecture version used for computing the target",
-    )
-    parser.add_argument(
-        "--target-perturbation",
-        required=True,
-        help="Perturbation model used for computing the target",
-    )
-    parser.add_argument(
-        "--target-prefix", action="store", required=True, help="Target prefix path"
-    )
-    parser.add_argument(
-        "--target-dataset", action="store", required=True, help="Dataset target"
-    )
-    parser.add_argument(
-        "--target-subject", action="store", required=True, help="Subject target"
-    )
-    parser.add_argument(
-        "--target-template", action="store", required=True, help="Target template"
-    )
-
-
 def init_module(parser, subparser):
-    smri_parser = subparser.add_parser("smri")
+    msg = "Submodule for Structural MRI data"
+    smri_parser = subparser.add_parser("smri", description=msg, help=msg)
     init_global_args(smri_parser)
-
-    if parser.prog == "stabilitest test":
-        init_test_args(smri_parser)

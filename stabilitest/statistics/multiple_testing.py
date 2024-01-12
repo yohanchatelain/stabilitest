@@ -5,8 +5,6 @@ import numpy as np
 from scipy.stats import binomtest
 from statsmodels.stats.multitest import multipletests
 
-# euler_constant = 0.5772156649015328
-
 
 def pce_test(reject, tests, alpha):
     b = binomtest(k=reject, n=tests, p=alpha)
@@ -29,8 +27,8 @@ def pce(target, alpha, p_values):
         pprinter.print_name_method("Per-Comparison Error (Uncorrected)")
         print(f"- Alpha                    = {threshold:f}")
         print(f"- Card(Reject)             = {nb_reject}")
-        print(f"- Card(Tests)              = {size}")
-        print(f"- Card(Reject)/Card(Tests) = {ratio:.2e} [{ratio*100:f}%]")
+        print(f"- Card(tests)              = {size}")
+        print(f"- Card(Reject)/Card(tests) = {ratio:.2e} [{ratio*100:f}%]")
     pprinter.print_result(target, nb_reject, size, alpha, passed, name)
 
     return nb_reject, size, passed
@@ -49,8 +47,8 @@ def pce_sig(target, alpha, reject):
     if pprinter.verbose():
         pprinter.print_name_method("Per-Comparison Error (Uncorrected)")
         print(f"- Card(Reject)         = {nb_reject}")
-        print(f"- Card(Tests)          = {size}")
-        print(f"- Card(FP)/Card(Tests) = {ratio:.2e} [{ratio*100:f}%]")
+        print(f"- Card(tests)          = {size}")
+        print(f"- Card(FP)/Card(tests) = {ratio:.2e} [{ratio*100:f}%]")
     pprinter.print_result(target, nb_reject, size, alpha, passed, name)
 
     return nb_reject, size, passed
@@ -58,7 +56,7 @@ def pce_sig(target, alpha, reject):
 
 def mct(target, alpha, p_values, method, short_name, long_name, success_test):
     """
-    Generic method for compute Multiple Comparison Tests rate.
+    Generic method for compute Multiple Comparison tests rate.
     """
     name = short_name
     size = p_values.size
@@ -89,8 +87,8 @@ def mct(target, alpha, p_values, method, short_name, long_name, success_test):
         if ct is not None:
             print(f"- Alpha correction     = {ct:f} ({ct:.3e})")
         print(f"- Card(FP)             = {nb_reject}")
-        print(f"- Card(Tests)          = {size}")
-        print(f"- Card(FP)/Card(Tests) = {ratio:.2e} [{ratio*100:f}%]")
+        print(f"- Card(tests)          = {size}")
+        print(f"- Card(FP)/Card(tests) = {ratio:.2e} [{ratio*100:f}%]")
 
     pprinter.print_result(
         target, nb_reject, size, alpha, success_test(nb_reject, size, alpha), name
@@ -101,7 +99,7 @@ def mct(target, alpha, p_values, method, short_name, long_name, success_test):
 
 def fwe_bonferroni(target, alpha, p_values):
     """
-    Compute the failing Tests ratio using the Bonferonni correction
+    Compute the failing tests ratio using the Bonferonni correction
     """
 
     def success_test(reject, tests, alpha):
@@ -120,7 +118,7 @@ def fwe_bonferroni(target, alpha, p_values):
 
 def fwe_sidak(target, alpha, p_values):
     """
-    Compute the failing Tests ratio using the Sidak correction
+    Compute the failing tests ratio using the Sidak correction
     """
 
     def success_test(reject, tests, alpha):
@@ -139,7 +137,7 @@ def fwe_sidak(target, alpha, p_values):
 
 def fwe_holm_sidak(target, alpha, p_values):
     """
-    Compute the failing Tests ratio using the Holm-Sidak correction
+    Compute the failing tests ratio using the Holm-Sidak correction
     """
 
     def success_test(reject, tests, alpha):
@@ -158,7 +156,7 @@ def fwe_holm_sidak(target, alpha, p_values):
 
 def fwe_holm_bonferroni(target, alpha, p_values):
     """
-    Compute the failing Tests ratio using the Holm-Bonferonni correction
+    Compute the failing tests ratio using the Holm-Bonferonni correction
     """
 
     def success_test(reject, tests, alpha):
@@ -177,7 +175,7 @@ def fwe_holm_bonferroni(target, alpha, p_values):
 
 def fwe_simes_hochberg(target, alpha, p_values):
     """
-    Compute the failing Tests ratio using the Simes-Hochberg correction
+    Compute the failing tests ratio using the Simes-Hochberg correction
     """
 
     def success_test(reject, tests, alpha):
@@ -196,7 +194,7 @@ def fwe_simes_hochberg(target, alpha, p_values):
 
 def fdr_BH(target, alpha, p_values):
     """
-    Compute the failing Tests ratio using the False Discovery Rate correction (Benjamini-Hochberg)
+    Compute the failing tests ratio using the False Discovery Rate correction (Benjamini-Hochberg)
     """
 
     def success_test(reject, tests, alpha):
@@ -215,7 +213,7 @@ def fdr_BH(target, alpha, p_values):
 
 def fdr_BY(target, alpha, p_values):
     """
-    Compute the failing Tests ratio using the False Discovery Rate correction (Benjamini-Yekutieli)
+    Compute the failing tests ratio using the False Discovery Rate correction (Benjamini-Yekutieli)
     """
 
     def success_test(reject, tests, alpha):
@@ -234,7 +232,7 @@ def fdr_BY(target, alpha, p_values):
 
 def fdr_TSBH(target, alpha, p_values):
     """
-    Compute the failing Tests ratio using the False Discovery Rate correction (Two-stage Benjamini-Hochberg)
+    Compute the failing tests ratio using the False Discovery Rate correction (Two-stage Benjamini-Hochberg)
     """
 
     def success_test(reject, tests, alpha):
@@ -253,7 +251,7 @@ def fdr_TSBH(target, alpha, p_values):
 
 def fdr_TSBY(target, alpha, p_values):
     """
-    Compute the failing Tests ratio using the False Discovery Rate correction (Two-Stage Benjamini-Yekutieli)
+    Compute the failing tests ratio using the False Discovery Rate correction (Two-Stage Benjamini-Yekutieli)
     """
 
     def success_test(reject, tests, alpha):
@@ -272,16 +270,45 @@ def fdr_TSBY(target, alpha, p_values):
 
 ___methods = {
     "pce": pce,
-    "fdr_TSBY": fdr_TSBY,
-    "fdr_TSBH": fdr_TSBH,
-    "fdr_BY": fdr_BY,
-    "fdr_BH": fdr_BH,
-    "fwe_simes_hochberg": fwe_simes_hochberg,
-    "fwe_holm_bonferroni": fwe_holm_bonferroni,
-    "fwe_holm_sidak": fwe_holm_sidak,
-    "fwe_sidak": fwe_sidak,
-    "fwe_bonferroni": fwe_bonferroni,
+    "fdr-TSBY": fdr_TSBY,
+    "fdr-TSBH": fdr_TSBH,
+    "fdr-BY": fdr_BY,
+    "fdr-BH": fdr_BH,
+    "fwe-simes-hochberg": fwe_simes_hochberg,
+    "fwe-holm-bonferroni": fwe_holm_bonferroni,
+    "fwe-holm-sidak": fwe_holm_sidak,
+    "fwe-sidak": fwe_sidak,
+    "fwe-bonferroni": fwe_bonferroni,
 }
+
+__description = """
+Per-Comparison Error (PCE)
+----------------------------
+The PCE is the ratio of the number of false positives to the number of tests.
+
+Family-Wise Error rate (FWE)
+----------------------------
+Probability of making a Type I error among a family of tests
+
+  - fwe-bonferroni: Bonferroni correction
+  - fwe-sidak: Sidak correction
+  - fwe-holm-bonferroni: Holm-Bonferroni correction
+  - fwe-holm-sidak: Holm-Sidak correction
+  - fwe-simes-hochberg: Simes-Hochberg correction
+
+False Discovery Rate (FDR)
+----------------------------
+Expected proportion of "discoveries" (rejected null hypotheses) that are false (incorrect rejections of the null)
+
+  - fdr-BH: Benjamini-Hochberg correction
+  - fdr-BY: Benjamini-Yekutieli correction
+  - fdr-TSBH: Two-Stage Benjamini-Hochberg correction
+  - fdr-TSBY: Two-Stage Benjamini-Yekutieli correction
+"""
+
+
+def get_description():
+    return __description
 
 
 def get_method_names():

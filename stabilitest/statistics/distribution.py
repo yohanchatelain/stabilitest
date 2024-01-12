@@ -206,3 +206,14 @@ def get_distribution(args):
         return GaussianGeneral()
     if args.distribution == "significant-digit":
         return SignificantDigits()
+
+
+def get_distribution_names():
+    return [
+        "normal",
+        "student",
+        "normal-skew",
+        "normal-general",
+        "gaussian-mixture",
+        "significant-digit",
+    ]

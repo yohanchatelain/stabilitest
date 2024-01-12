@@ -1,21 +1,24 @@
 import glob
 import logging
 import os
-import joblib
 
+import joblib
 import nibabel
 import nilearn
+import nilearn.image
+import nilearn.masking
 import numpy as np
 import tqdm
 from icecream import ic
-from nilearn.masking import apply_mask, intersect_masks, unmask
+from nilearn.masking import apply_mask, intersect_masks
 
 import stabilitest.mri_loader.constants as mri_constants
 import stabilitest.pprinter as mrip
 
 
 def load_derivative(path):
-    return nibabel.load(path)
+    realpath = os.path.realpath(path)
+    return nibabel.load(realpath)
 
 
 def mask_image(image, mask):
@@ -94,6 +97,8 @@ def combine_mask(masks_list, operator):
     """
     Combine mask depending on the operator
     """
+    if masks_list is None:
+        raise ValueError("No mask list provided to compute mask combination")
     if operator == "union":
         threshold = 0
     elif operator == "intersection":
@@ -158,6 +163,13 @@ def load(
 
     if len(derivatives) == 0:
         print(f"No derivatives {derivative} found")
+        print("Root paths: ")
+        for path in root_paths[:10]:
+            print(f" - {path}")
+        if len(root_paths) > 10:
+            print("   ...")
+            print(f"   [{len(root_paths)} found]")
+        print(f"Derivative path: {derivative_path}")
         raise Exception("DerivativeEmpty")
 
     return derivatives
@@ -186,9 +198,26 @@ def load_brain_mask(prefix, dataset, subject, template, datatype):
 
 
 def get_masked_t1(t1, mask, smooth_kernel, normalize):
+    if t1 is None:
+        error = ValueError("No T1 provided")
+        ic(error)
+        raise error
+    if mask is None:
+        error = ValueError(f"No mask provided for {t1.get_filename()} T1 image")
+        ic(error)
+        raise error
+
     if smooth_kernel == 0:
         smooth_kernel = None
-    masked = apply_mask(imgs=t1, mask_img=mask, smoothing_fwhm=smooth_kernel)
+    try:
+        masked = apply_mask(imgs=t1, mask_img=mask, smoothing_fwhm=smooth_kernel)
+    except TypeError as e:
+        ic(e)
+        ic(t1)
+        ic(mask)
+        ic(smooth_kernel)
+        raise e
+
     if normalize:
         masked = normalize_ndarray(masked)
 
@@ -206,20 +235,27 @@ def get_masked_t1_curr(margs):
     return get_masked_t1(t1, mask, smooth_kernel, normalize)
 
 
-def get_masked_t1s(args, t1s, supermask):
-    results = []
-
+def _get_masked_t1s(args, t1s, supermask):
     n_jobs = min(args.cpus, len(t1s))
-    with tqdm.tqdm(desc="Masking reference", unit="image", total=len(t1s)) as pbar:
-        for image in joblib.Parallel(n_jobs=n_jobs, batch_size=1)(
-            joblib.delayed(get_masked_t1)(
-                t1, supermask, args.smooth_kernel, args.normalize
-            )
-            for t1 in t1s
-        ):
-            pbar.update()
-            results.append(image)
+    results = joblib.Parallel(n_jobs=n_jobs, batch_size=1, verbose=10)(
+        joblib.delayed(get_masked_t1)(t1, supermask, args.smooth_kernel, args.normalize)
+        for t1 in t1s
+    )
+    return results
 
+
+def get_masked_t1s(args, t1s, supermask):
+    ic("Compute super brain mask")
+    results = []
+    try:
+        results = _get_masked_t1s(args, t1s, supermask)
+    except Exception as e:
+        error = ValueError(f"Error while masking T1s: {e}")
+        ic(error)
+        ic(args)
+        ic(t1s)
+        ic(supermask)
+        raise e
     return np.stack(results)
 
 

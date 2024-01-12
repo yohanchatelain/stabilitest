@@ -12,11 +12,15 @@ def preprocess(
     pass
 
 
+def configurator(args):
+    return []
+
+
 class NumpySample(Sample):
     def __init__(self, args):
         self.args = args
-        self.data = None
-        self.size = None
+        self._data = None
+        self._size = None
         self.paths = None
 
     def copy(self, sample):
@@ -25,8 +29,25 @@ class NumpySample(Sample):
         self.size = sample.size
         self.paths = sample.paths
 
-    def get_size(self):
-        return self.size
+    @property
+    def size(self):
+        return self._size
+
+    @size.setter
+    def size(self, size):
+        self._size = size
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, data):
+        self._data = data
+
+    @property
+    def metadata(self):
+        return self.paths
 
     def get_subsample(self, indexes=None):
         return self.data[self.__parse_index(indexes)]

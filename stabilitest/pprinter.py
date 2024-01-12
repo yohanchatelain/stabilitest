@@ -54,13 +54,22 @@ def __ratio_msg(alpha, reject, tests, passed):
     return __test_color(passed)(ratio_msg)
 
 
-def print_result(target, reject, tests, alpha, passed, name=None):
+def as_success(msg):
+    return __pass_color_msg(msg)
+
+
+def as_failure(msg):
+    return __fail_color_msg(msg)
+
+
+def print_result(target, reject, tests, alpha, passed, name=None, verbose=False):
     name_msg = __name_msg(name)
     label_msg = __pass_color_msg("PASS") if passed else __fail_color_msg("FAIL")
     ratio_msg = __ratio_msg(alpha, reject, tests, passed)
     filename_msg = target
 
-    print(f"{name_msg} {label_msg} {ratio_msg} {filename_msg}")
+    if verbose:
+        print(f"{name_msg} {label_msg} {ratio_msg} {filename_msg}")
 
 
 def print_info(score, nsample, target, i=None, verbose=False):

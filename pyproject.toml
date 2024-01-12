@@ -20,6 +20,7 @@ dependencies = [
     "statsmodels",
     "icecream",
     "joblib",
+    "faker"
 ]
 
 [project.scripts]
