@@ -1,20 +1,21 @@
-import logging
+import itertools
+import json
+from collections import namedtuple
 
 import numpy as np
-from sklearn.model_selection import KFold
 import tqdm
+from sklearn.model_selection import KFold
 
 import stabilitest.pprinter as pprinter
 import stabilitest.statistics.distribution as dist
 import stabilitest.statistics.multiple_testing as mt
-
-from collections import namedtuple
+import stabilitest.logger as logger
 
 Result = namedtuple("result", "reject tests passed confidence")
 
 
 def run_tests(
-    args,
+    config,
     reference_sample,
     reference_ids,
     target_sample,
@@ -23,7 +24,7 @@ def run_tests(
     extra_info,
     collector,
 ):
-    confidences = args.confidence
+    confidences = config["confidence"]
 
     distribution_name = distribution.get_name()
 
@@ -40,7 +41,7 @@ def run_tests(
     p_values = distribution.p_value(target_sample.get_subsample(target_id)).ravel()
     p_values.sort()
 
-    methods = mt.get_methods(args)
+    methods = mt.get_methods(config["multiple-comparisons-tests"])
 
     results = {}
 
@@ -65,7 +66,7 @@ def run_tests(
 
 
 def perform_test_per_target(
-    args,
+    config,
     sample_module,
     reference_sample,
     reference_ids,
@@ -94,13 +95,13 @@ def perform_test_per_target(
 
     distribution.fit(reference_sample.get_subsample())
 
-    if args.verbose:
-        logging.info(f"Use {distribution.get_name()} model")
+    if config["verbose"]:
+        print(f"Use {distribution.get_name()} model")
 
     fvr_per_target = {}
     for i in target_ids:
         fvr = run_tests(
-            args,
+            config,
             target_id=i,
             reference_ids=reference_ids,
             distribution=distribution,
@@ -115,7 +116,7 @@ def perform_test_per_target(
 
 
 def perform_kfold(
-    args,
+    config,
     sample_module,
     reference_sample,
     target_sample,
@@ -132,18 +133,12 @@ def perform_kfold(
     Return a list of FVR for each round
     """
 
-    # msg = f"{nb_rounds}-fold failing-voxels count"
-    # pprinter.print_sep1(f"{msg:^40}")
-
     kfold = KFold(nb_rounds)
     fvr_list = []
 
     def compute_k_fold_round(i, train_id, test_id):
-        # round_msg = f"Round {i}"
-        # pprinter.print_sep2(f"{round_msg:^40}")
-
         fvr = perform_test_per_target(
-            args,
+            config,
             sample_module=sample_module,
             reference_sample=reference_sample,
             reference_ids=train_id,
@@ -168,47 +163,54 @@ def perform_kfold(
     return fvr_list
 
 
-def run_kta(args, sample_module, collector):
-    sample = sample_module.get_reference_sample(args)
-    sample.load()
-
-    distribution = dist.get_distribution(args)
-
-    sample_size = sample.size
-    reference_subsample_ids = list(range(sample_size))
-    target_subsample_ids = list(range(sample_size))
-
-    fvr = perform_test_per_target(
-        args,
-        sample_module=sample_module,
-        reference_sample=sample,
-        reference_ids=reference_subsample_ids,
-        target_sample=sample.as_target(),
-        target_ids=target_subsample_ids,
-        distribution=distribution,
-        nb_round=1,
-        kth_round=1,
-        collector=collector,
-    )
-
-    return [fvr]
+def load_configuration(filename):
+    with open(filename, "r") as f:
+        return json.load(f)
 
 
-def run_single_test(args, sample_module, collector):
-    reference_sample = sample_module.get_reference_sample(args)
-    target_sample = sample_module.get_target_sample(args)
+def build_hyperparameters(config):
+    hyper_parameters = config.get("hyperparameters", None)
+    if hyper_parameters is not None:
+        return list(hyper_parameters.keys()), itertools.product(
+            *hyper_parameters.values()
+        )
+    else:
+        return [], []
+
+
+def run_test_over_hyperparameters(args, sample_module, collector, run_test):
+    config = load_configuration(args.configuration_file)
+    hyperparameters_names, hyperparameters_values = build_hyperparameters(config)
+    fvr_map = {}
+    for hpv in hyperparameters_values:
+        hyperparameters = dict(zip(hyperparameters_names, hpv))
+        for distribution in config["distribution"]:
+            fvr = run_test(
+                config,
+                sample_module,
+                collector,
+                distribution,
+                hyperparameters,
+            )
+            fvr_map[hpv] = fvr
+    return hyperparameters_names, fvr_map
+
+
+def _run_single_test(config, sample_module, collector, distribution, hyperparameters):
+    print("\nRun single test")
+    print(f"hyperparameters: {pprinter.hyperparameters_to_str(hyperparameters)}\n\n")
+    reference_sample = sample_module.get_reference_sample(config, hyperparameters)
+    target_sample = sample_module.get_target_sample(config, hyperparameters)
     reference_sample.load()
     target_sample.load()
 
     reference_subsample_ids = list(range(reference_sample.size))
     target_subsample_ids = list(range(target_sample.size))
 
-    distribution = dist.get_distribution(args)
-
-    logging.info(f"Sample size: {reference_sample.size}")
+    distribution = dist.get_distribution(distribution)
 
     fvr = perform_test_per_target(
-        args,
+        config,
         sample_module=sample_module,
         reference_sample=reference_sample,
         reference_ids=reference_subsample_ids,
@@ -223,16 +225,56 @@ def run_single_test(args, sample_module, collector):
     return [fvr]
 
 
-def run_loo(args, sample_module, collector):
-    sample = sample_module.get_reference_sample(args)
+def run_single_test(args, sample_module, collector):
+    return run_test_over_hyperparameters(
+        args, sample_module, collector, _run_single_test
+    )
+
+
+def _run_kta(config, sample_module, collector, distribution, hyperparameters):
+    print("\nRun keep-them-all cross-validation")
+    print(f"hyperparameters: {pprinter.hyperparameters_to_str(hyperparameters)}\n\n")
+
+    sample = sample_module.get_reference_sample(config)
     sample.load()
 
-    distribution = dist.get_distribution(args)
+    distribution = dist.get_distribution(distribution)
 
-    logging.info(f"Sample size: {sample.size}")
+    sample_size = sample.size
+    reference_subsample_ids = list(range(sample_size))
+    target_subsample_ids = list(range(sample_size))
+
+    fvr = perform_test_per_target(
+        config,
+        sample_module=sample_module,
+        reference_sample=sample,
+        reference_ids=reference_subsample_ids,
+        target_sample=sample.as_target(),
+        target_ids=target_subsample_ids,
+        distribution=distribution,
+        nb_round=1,
+        kth_round=1,
+        collector=collector,
+    )
+
+    return [fvr]
+
+
+def run_kta(args, sample_module, collector):
+    return run_test_over_hyperparameters(args, sample_module, collector, _run_kta)
+
+
+def _run_loo(config, sample_module, collector, distribution, hyperparameters):
+    print("\nRun leave-one-out cross-validation")
+    print(f"hyperparameters: {pprinter.hyperparameters_to_str(hyperparameters)}\n\n")
+
+    sample = sample_module.get_reference_sample(config, hyperparameters)
+    sample.load()
+
+    distribution = dist.get_distribution(distribution)
 
     fvr = perform_kfold(
-        args,
+        config,
         sample_module=sample_module,
         reference_sample=sample,
         target_sample=sample.as_target(),
@@ -244,25 +286,34 @@ def run_loo(args, sample_module, collector):
     return fvr
 
 
-def run_kfold(args, sample_module, collector):
-    sample = sample_module.get_reference_sample(args)
+def run_loo(args, sample_module, collector):
+    return run_test_over_hyperparameters(args, sample_module, collector, _run_loo)
+
+
+def _run_kfold(config, sample_module, collector, distribution, hyperparameters):
+    print("\nRun K-fold cross-validation")
+    print(f"hyperparameters: {pprinter.hyperparameters_to_str(hyperparameters)}\n\n")
+
+    sample = sample_module.get_reference_sample(config)
     sample.load()
 
-    distribution = dist.get_distribution(args)
-
-    logging.info(f"Sample size: {sample.size}")
+    distribution = dist.get_distribution(distribution)
 
     fvr = perform_kfold(
-        args,
+        config,
         sample_module=sample_module,
         reference_sample=sample,
         target_sample=sample.as_target(),
         distribution=distribution,
-        nb_rounds=args.k_fold_rounds,
+        nb_rounds=config["k-fold-rounds"],
         collector=collector,
     )
 
     return fvr
+
+
+def run_kfold(args, sample_module, collector):
+    return run_test_over_hyperparameters(args, sample_module, collector, _run_kfold)
 
 
 def compute_n_effective_over_voxels(alpha, p_values, N):

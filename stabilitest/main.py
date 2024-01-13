@@ -1,10 +1,11 @@
+import json
 import warnings
 
-import json
 import numpy as np
 from icecream import ic
 
 import stabilitest
+import stabilitest.help
 import stabilitest.model as model
 import stabilitest.mri_loader.sample
 import stabilitest.normality
@@ -12,8 +13,9 @@ import stabilitest.numpy_loader.sample
 import stabilitest.parse_args as parse_args
 import stabilitest.pprinter as pprinter
 import stabilitest.statistics.stats
-import stabilitest.help
 from stabilitest.collect import Collector
+import stabilitest.logger as logger
+
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
@@ -34,23 +36,43 @@ def run_configurator(args, collector):
 
 def run_kta(args, collector):
     sample_module = get_sample_module(args)
-    fvr = model.run_kta(args, sample_module, collector)
-    parse_output(fvr)
-    return fvr
+    hyperparameter_names, fvr_map = model.run_kta(args, sample_module, collector)
+    print("\nResults:")
+    for id, (hpv, fvr) in enumerate(fvr_map.items()):
+        hyperparameters = dict(zip(hyperparameter_names, hpv))
+        print(
+            f"\n({id}) Hyperparameters: {pprinter.hyperparameters_to_str(hyperparameters)}"
+        )
+        parse_output(fvr)
+    return fvr_map
 
 
 def run_loo(args, collector):
     sample_module = get_sample_module(args)
-    fvr = model.run_loo(args, sample_module, collector)
-    parse_output(fvr)
-    return fvr
+    hyperparameter_names, fvr_map = model.run_loo(args, sample_module, collector)
+    print("\nResults:")
+    for id, (hpv, fvr) in enumerate(fvr_map.items()):
+        hyperparameters = dict(zip(hyperparameter_names, hpv))
+        print(
+            f"\n({id}) Hyperparameters: {pprinter.hyperparameters_to_str(hyperparameters)}"
+        )
+        parse_output(fvr)
+    return fvr_map
 
 
-def run_test(args, collector):
+def run_single_test(args, collector):
     sample_module = get_sample_module(args)
-    fvr = model.run_single_test(args, sample_module, collector)
-    parse_output(fvr)
-    return fvr
+    hyperparameter_names, fvr_map = model.run_single_test(
+        args, sample_module, collector
+    )
+    print("\nResults:")
+    for id, (hpv, fvr) in enumerate(fvr_map.items()):
+        hyperparameters = dict(zip(hyperparameter_names, hpv))
+        print(
+            f"\n({id}) Hyperparameters: {pprinter.hyperparameters_to_str(hyperparameters)}"
+        )
+        parse_output(fvr)
+    return fvr_map
 
 
 def run_normality(args, collector):
@@ -60,9 +82,15 @@ def run_normality(args, collector):
 
 def run_kfold(args, collector):
     sample_module = get_sample_module(args)
-    fvr = model.run_kfold(args, sample_module, collector)
-    parse_output(fvr)
-    return fvr
+    hyperparameter_names, fvr_map = model.run_kfold(args, sample_module, collector)
+    print("\nResults:")
+    for id, (hpv, fvr) in enumerate(fvr_map.items()):
+        hyperparameters = dict(zip(hyperparameter_names, hpv))
+        print(
+            f"\n({id}) Hyperparameters: {pprinter.hyperparameters_to_str(hyperparameters)}"
+        )
+        parse_output(fvr)
+    return fvr_map
 
 
 def run_stats(args, collector):
@@ -88,7 +116,7 @@ def run_cross_validation(args, collector):
 
 tests = {
     "configurator": run_configurator,
-    "single-test": run_test,
+    "single-test": run_single_test,
     "cross-validation": run_cross_validation,
     "normality": run_normality,
     "stats": run_stats,
@@ -132,11 +160,11 @@ def parse_output(output):
                 ] = int(result.passed)
 
     for method, method_id in methods_.items():
-        print(f"Method {method}")
+        print(f"  Method: {method}")
         nb_rounds = len(runs_)
-        print(f"{nb_rounds} round{'s' if nb_rounds > 1 else ''}")
+        print(f"  {nb_rounds} round{'s' if nb_rounds > 1 else ''}")
         for confidence, confidence_id in confidences_.items():
-            print(f"{confidence:.3f} ", end="")
+            print(f"  {confidence:.3f} ", end="")
             for run, run_id in runs_.items():
                 for passed in _to_print[method_id][run_id][confidence_id]:
                     msg = (
@@ -147,12 +175,19 @@ def parse_output(output):
             print()
         print()
 
+    print("")
     for (method, confidence), passed in methods.items():
-        nb_tests = len(output)
-        ratio = passed / nb_tests
-        print(
-            f"Method: {method}, alpha: {1-confidence:.5f}, passed: {passed}, tests: {nb_tests}, ratio: {ratio:.2.2f}%"
-        )
+        nb_runs = len(output)
+        ratio = passed / nb_runs
+        fields = [
+            f"Method: {method}",
+            f"alpha: {1-confidence:.5f}",
+            f"passed: {passed}",
+            f"runs: {nb_runs}",
+        ]
+        if nb_runs > 1:
+            fields += [f"ratio: {ratio:2.2f}%"]
+        print(", ".join(fields))
 
 
 def main(args=None):
@@ -160,8 +195,11 @@ def main(args=None):
 
     parser, parsed_args = parse_args.parse_args(args)
 
-    if parsed_args.verbose:
-        pprinter.enable_verbose_mode()
+    if parsed_args.debug:
+        logger.set_debug_mode()
+
+    # if parsed_args.verbose:
+    #     pprinter.enable_verbose_mode()
 
     if parsed_args.analysis == "list-domain":
         ic(parser)
@@ -185,6 +223,10 @@ def main(args=None):
         parser.print_help()
         return
 
-    collector = Collector(parsed_args.output)
+    if parsed_args.analysis != "configurator":
+        config = parse_args.load_configuration_file(parsed_args.configuration_file)
+        collector = Collector(config["output"])
+    else:
+        collector = Collector()
     tests[parsed_args.analysis](parsed_args, collector)
     collector.dump()

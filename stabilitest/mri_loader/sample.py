@@ -1,36 +1,35 @@
-from distutils import extension
-import numpy as np
-from icecream import ic
 import json
-import faker
 import os
 
+import faker
+import numpy as np
+
+import stabilitest.logger as logger
 import stabilitest.mri_loader.image as mri_image
+import stabilitest.mri_loader.parse_args as mri_args
+from stabilitest.parse_args import _default_confidence_values
 from stabilitest.sample import Sample
+from stabilitest.statistics.distribution import get_distribution_names
+from stabilitest.statistics.multiple_testing import get_method_names
 
 
 def configurator(args):
     fake = faker.Faker()
     config = {
-        "general": {
-            "output": fake.file_name(extension="pkl"),
-            "verbose": fake.boolean(),
-            "cpus": fake.pyint(),
-            "cached": fake.boolean(),
-        },
-        "confidence": [
-            fake.pyfloat(left_digits=1, right_digits=4, min_value=0, max_value=1)
-        ],
-        "distribution": [fake.word()],
-        "parallel-fitting": fake.boolean(),
-        "multiple-comparison-tests": [fake.word()],
-        "model": fake.word(),
-        "k-fold-rounds": fake.pyint(),
+        "output": "output.pkl",
+        "verbose": False,
+        "cpus": 1,
+        "cached": False,
+        "confidence": _default_confidence_values,
+        "distribution": get_distribution_names(),
+        "parallel-fitting": False,
+        "multiple-comparison-tests": get_method_names(),
+        "datatype": "anat",
         "reference": {
             "prefix": os.path.dirname(fake.file_path(depth=3)),
             "dataset": fake.numerify("ds######"),
             "subject": fake.numerify("sub-######"),
-            "template": fake.numerify("MNI###NLin###Asym"),
+            "template": fake.numerify("MNI152NLin2009cAsym"),
             "version": fake.numerify("v#.#.#"),
             "architecture": fake.word(),
             "perturbation": fake.word(),
@@ -39,22 +38,24 @@ def configurator(args):
             "prefix": os.path.dirname(fake.file_path(depth=3)),
             "dataset": fake.numerify("ds######"),
             "subject": fake.numerify("sub-######"),
-            "template": fake.numerify("MNI###NLin###Asym"),
+            "template": fake.numerify("MNI152NLin2009cAsym"),
             "version": fake.numerify("v#.#.#"),
             "architecture": fake.word(),
             "perturbation": fake.word(),
         },
-        "normalize": fake.boolean(),
-        "mask-combination": fake.word(),
-        "smooth-kernel": [fake.pyint()],
+        "normalize": True,
+        "hyperparameters": {
+            "mask-combination": mri_args._defaults_mask_combination,
+            "smooth-kernel": mri_args._defaults_smoothing_kernel,
+        },
     }
     return json.dumps(config, indent=2)
 
 
 class MRISample(Sample):
-    def __init__(self, args):
-        self.args = args
-        self._config = self._load_config(args.config_file)
+    def __init__(self, config, hyperparameters):
+        self.config = config
+        self.hyperparameters = hyperparameters
         self.t1ws = None
         self.t1ws_metadata = None
         self.brain_masks = None
@@ -62,18 +63,19 @@ class MRISample(Sample):
         self._supermask = None
         # T1ws masked, smoothed and min-max scaled
         self._preproc_t1ws = None
+        self.smooth_kernel = hyperparameters["smooth-kernel"]
+        self.mask_combination = hyperparameters["mask-combination"]
 
-    def _load_config(self, config_file):
-        return json.load(open(config_file))
-
-    def copy(self, sample):
-        self.args = sample.args
-        self.config_file = sample.config_file
+    def copy(self, sample: "MRISample") -> None:
+        self.config = sample.config
+        self.hyperparameters = sample.hyperparameters
         self.t1ws = sample.t1ws
         self.t1ws_metadata = sample.t1ws_metadata
         self.brain_masks = sample.brain_masks
         self.brain_masks_metadata = sample.brain_masks_metadata
-        self.preprocessed_t1ws = sample.preproc_t1ws
+        self.preprocessed_t1ws = sample.preprocessed_t1ws
+        self.smooth_kernel = sample.smooth_kernel
+        self.mask_combination = sample.mask_combination
 
     def __str__(self):
         return str(self.t1ws)
@@ -101,7 +103,13 @@ class MRISample(Sample):
         if self.t1ws is None:
             raise Exception("Sample not loaded")
         t1ws = self.t1ws[self.__parse_index(indexes)]
-        return mri_image.get_masked_t1s(self.args, t1ws, supermask)
+        return mri_image.get_masked_t1s(
+            t1ws,
+            supermask,
+            self.smooth_kernel,
+            self.config["normalize"],
+            self.config["cpus"],
+        )
 
     @property
     def size(self):
@@ -156,17 +164,12 @@ class MRISample(Sample):
         if self.brain_masks is None:
             raise Exception("Brain masks sample not loaded")
         brain_masks = self.brain_masks[self.__parse_index(indexes)]
-        return mri_image.combine_mask(brain_masks, self.args.mask_combination)
+        return mri_image.combine_mask(brain_masks, self.mask_combination)
 
     def _get_raw_data_item(self, indexes):
         if self.t1ws is None:
             raise Exception("Sample not loaded")
         return self.t1ws[self.__parse_index(indexes)]
-
-    # def __getitem__(self, indexes):
-    #     if self.t1ws is None:
-    #         raise Exception("Sample not loaded")
-    #     return self.t1ws[self.__parse_index(indexes)]
 
     def __parse_index(self, indexes):
         if indexes is None:
@@ -207,14 +210,16 @@ class MRISample(Sample):
 
 class MRISampleReference(MRISample):
     def load(self, force=False):
-        ic("Load reference sample")
+        print("Load reference sample")
+        logger.debug(self.config)
         self._load_t1_and_brain_maks(
-            prefix=self.args.reference_prefix,
-            dataset=self.args.reference_dataset,
-            subject=self.args.reference_subject,
-            template=self.args.reference_template,
-            datatype=self.args.datatype,
+            prefix=self.config["reference"]["prefix"],
+            dataset=self.config["reference"]["dataset"],
+            subject=self.config["reference"]["subject"],
+            template=self.config["reference"]["template"],
+            datatype=self.config["datatype"],
         )
+        print(f"Reference sample size: {self.size}")
 
     def get_info(self, indexes=None):
         if indexes is None or indexes is Ellipsis:
@@ -222,16 +227,16 @@ class MRISampleReference(MRISample):
         else:
             sample_size = len(indexes)
         info = {
-            "reference_version": self.args.reference_version,
-            "reference_architecture": self.args.reference_architecture,
-            "reference_perturbation": self.args.reference_perturbation,
-            "reference_prefix": self.args.reference_prefix,
-            "reference_dataset": self.args.reference_dataset,
-            "reference_subject": self.args.reference_subject,
-            "reference_template": self.args.reference_template,
+            "reference_version": self.config["reference"]["version"],
+            "reference_architecture": self.config["reference"]["architecture"],
+            "reference_perturbation": self.config["reference"]["perturbation"],
+            "reference_prefix": self.config["reference"]["prefix"],
+            "reference_dataset": self.config["reference"]["dataset"],
+            "reference_subject": self.config["reference"]["subject"],
+            "reference_template": self.config["reference"]["template"],
             "reference_sample_size": sample_size,
-            "reference_fwhm": self.args.smooth_kernel,
-            "reference_mask": self.args.mask_combination,
+            "reference_fwhm": self.smooth_kernel,
+            "reference_mask": self.mask_combination,
         }
 
         return info
@@ -240,51 +245,55 @@ class MRISampleReference(MRISample):
         """
         return reference sample as a target sample
         """
-        args = self.args
-        args.target_version = args.reference_version
-        args.target_perturbation = args.reference_perturbation
-        args.target_architecture = args.reference_architecture
-        args.target_prefix = args.reference_prefix
-        args.target_dataset = args.reference_dataset
-        args.target_subject = args.reference_subject
-        args.target_template = args.reference_template
-        target_sample = MRISampleTarget(self.args)
+        config = self.config
+        if "target" not in config:
+            config["target"] = {}
+        config["target"]["version"] = config["reference"]["version"]
+        config["target"]["perturbation"] = config["reference"]["perturbation"]
+        config["target"]["architecture"] = config["reference"]["architecture"]
+        config["target"]["prefix"] = config["reference"]["prefix"]
+        config["target"]["dataset"] = config["reference"]["dataset"]
+        config["target"]["subject"] = config["reference"]["subject"]
+        config["target"]["template"] = config["reference"]["template"]
+        target_sample = MRISampleTarget(self.config, self.hyperparameters)
         target_sample.copy(self)
         return target_sample
 
 
 class MRISampleTarget(MRISample):
     def load(self, force=False):
-        ic("Load target sample")
+        print("Load target sample")
+        logger.debug(self.config)
         self._load_t1_and_brain_maks(
-            prefix=self.args.target_prefix,
-            dataset=self.args.target_dataset,
-            subject=self.args.target_subject,
-            template=self.args.target_template,
-            datatype=self.args.datatype,
+            prefix=self.config["target"]["prefix"],
+            dataset=self.config["target"]["dataset"],
+            subject=self.config["target"]["subject"],
+            template=self.config["target"]["template"],
+            datatype=self.config["datatype"],
         )
+        print(f"Target sample size: {self.size}")
 
     def get_info(self, indexes):
         info = {
-            "target_version": self.args.target_version,
-            "target_architecture": self.args.target_architecture,
-            "target_perturbation": self.args.target_perturbation,
-            "target_prefix": self.args.target_prefix,
-            "target_dataset": self.args.target_dataset,
-            "target_subject": self.args.target_subject,
-            "target_template": self.args.target_template,
+            "target_version": self.config["target"]["version"],
+            "target_architecture": self.config["target"]["architecture"],
+            "target_perturbation": self.config["target"]["perturbation"],
+            "target_prefix": self.config["target"]["prefix"],
+            "target_dataset": self.config["target"]["dataset"],
+            "target_subject": self.config["target"]["subject"],
+            "target_template": self.config["target"]["template"],
             "target_filename": self.get_subsample_id(indexes),
         }
 
         return info
 
 
-def get_reference_sample(args):
-    return MRISampleReference(args)
+def get_reference_sample(config, hyperparameters=None):
+    return MRISampleReference(config, hyperparameters)
 
 
-def get_target_sample(args):
-    return MRISampleTarget(args)
+def get_target_sample(config, hyperparameters=None):
+    return MRISampleTarget(config, hyperparameters)
 
 
 def preprocess(
@@ -296,14 +305,18 @@ def preprocess(
     if reference_ids is None:
         reference_ids = list(range(reference_sample.size))
 
+    print("Compute supermask")
     reference_sample.supermask = reference_sample.compute_supermask(reference_ids)
+    print("Preprocess reference sample")
     reference_sample.preprocessed_t1ws = reference_sample._preprocess_t1w(
         reference_ids, reference_sample.supermask
     )
 
     if target_sample:
         target_sample.supermask = reference_sample.supermask
+        print("Resample target images onto reference's shape (if needed)")
         target_sample.resample(reference_sample._get_raw_data_item(0))
+        print("Preprocess target sample")
         target_sample.preprocessed_t1ws = target_sample._preprocess_t1w(
             None, reference_sample.supermask
         )

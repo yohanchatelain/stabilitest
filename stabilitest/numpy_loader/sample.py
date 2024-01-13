@@ -1,9 +1,14 @@
 import glob
+import json
 import os
 
+import faker
 import numpy as np
 
+from stabilitest.parse_args import _default_confidence_values
 from stabilitest.sample import Sample
+from stabilitest.statistics.distribution import get_distribution_names
+from stabilitest.statistics.multiple_testing import get_method_names
 
 
 def preprocess(
@@ -13,18 +18,35 @@ def preprocess(
 
 
 def configurator(args):
-    return []
+    fake = faker.Faker()
+    config = {
+        "output": "output.pkl",
+        "verbose": False,
+        "cpus": 1,
+        "cached": False,
+        "confidence": _default_confidence_values,
+        "distribution": get_distribution_names(),
+        "parallel-fitting": False,
+        "multiple-comparison-tests": get_method_names(),
+        "reference": os.path.dirname(fake.file_path(depth=3)),
+        "target": os.path.dirname(fake.file_path(depth=3)),
+        "normalize": True,
+        "hyperparameters": {},
+    }
+    return json.dumps(config, indent=2)
 
 
 class NumpySample(Sample):
-    def __init__(self, args):
-        self.args = args
+    def __init__(self, config, hyperparameters=None):
+        self.config = config
+        self.hyperparameters = hyperparameters
         self._data = None
         self._size = None
         self.paths = None
 
     def copy(self, sample):
-        self.args = sample.args
+        self.config = sample.config
+        self.hyperparameters = sample.hyperparameters
         self.data = sample.data
         self.size = sample.size
         self.paths = sample.paths
@@ -50,9 +72,13 @@ class NumpySample(Sample):
         return self.paths
 
     def get_subsample(self, indexes=None):
+        if self.data is None:
+            raise Exception("Data not loaded")
         return self.data[self.__parse_index(indexes)]
 
     def get_subsample_id(self, indexes):
+        if self.paths is None:
+            raise Exception("Data not loaded")
         return self.paths[self.__parse_index(indexes)]
 
     def __parse_index(self, indexes):
@@ -89,38 +115,40 @@ class NumpySample(Sample):
 
 class NumpySampleReference(NumpySample):
     def load(self, force=False):
-        self._load(self.args.reference, force)
+        self._load(self.config["reference"], force)
 
     def get_info(self, indexes=None):
-        info = {"reference": self.args.reference, "normalize": self.args.normalize}
+        info = {
+            "reference": self.config["reference"],
+            "normalize": self.config["normalize"],
+        }
 
         return info
 
     def as_target(self):
-        args = self.args
-        args.target = args.reference
-        args.normalize = args.normalize
-        sample = NumpySampleTarget(args)
+        config = self.config
+        config["target"] = config["reference"]
+        sample = NumpySampleTarget(config)
         sample.copy(self)
         return sample
 
 
 class NumpySampleTarget(NumpySample):
     def load(self, force=False):
-        self._load(self.args.target, force)
+        self._load(self.config["target"], force)
 
     def get_info(self, indexes):
         info = {
-            "target": self.args.target,
+            "target": self.config["target"],
             "target_filename": self.get_subsample_id(indexes),
-            "normalize": self.args.normalize,
+            "normalize": self.config["normalize"],
         }
         return info
 
 
-def get_reference_sample(args):
-    return NumpySampleReference(args)
+def get_reference_sample(config, hyperparameters=None):
+    return NumpySampleReference(config, hyperparameters)
 
 
-def get_target_sample(args):
-    return NumpySampleTarget(args)
+def get_target_sample(config, hyperparameters=None):
+    return NumpySampleTarget(config, hyperparameters)

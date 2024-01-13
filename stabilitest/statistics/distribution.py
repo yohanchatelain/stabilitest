@@ -195,16 +195,16 @@ class SignificantDigits(Distribution):
         return test < self.parameters["loc"]
 
 
-def get_distribution(args):
-    if args.distribution == "normal":
+def get_distribution(distribution):
+    if distribution == "normal":
         return Gaussian()
-    if args.distribution == "student":
+    if distribution == "student":
         return Student()
-    if args.distribution == "normal-skew":
+    if distribution == "normal-skew":
         return GaussianSkew()
-    if args.distribution == "normal-general":
+    if distribution == "normal-general":
         return GaussianGeneral()
-    if args.distribution == "significant-digit":
+    if distribution == "significant-digit":
         return SignificantDigits()
 
 

@@ -14,6 +14,7 @@ from nilearn.masking import apply_mask, intersect_masks
 
 import stabilitest.mri_loader.constants as mri_constants
 import stabilitest.pprinter as mrip
+import stabilitest.logger as logger
 
 
 def load_derivative(path):
@@ -200,11 +201,11 @@ def load_brain_mask(prefix, dataset, subject, template, datatype):
 def get_masked_t1(t1, mask, smooth_kernel, normalize):
     if t1 is None:
         error = ValueError("No T1 provided")
-        ic(error)
+        logger.error(error)
         raise error
     if mask is None:
         error = ValueError(f"No mask provided for {t1.get_filename()} T1 image")
-        ic(error)
+        logger.error(error)
         raise error
 
     if smooth_kernel == 0:
@@ -212,10 +213,10 @@ def get_masked_t1(t1, mask, smooth_kernel, normalize):
     try:
         masked = apply_mask(imgs=t1, mask_img=mask, smoothing_fwhm=smooth_kernel)
     except TypeError as e:
-        ic(e)
-        ic(t1)
-        ic(mask)
-        ic(smooth_kernel)
+        logger.error(e)
+        logger.error(t1)
+        logger.error(mask)
+        logger.error(smooth_kernel)
         raise e
 
     if normalize:
@@ -228,33 +229,24 @@ def get_unmasked_t1(t1, supermask):
     return nilearn.masking.unmask(t1, supermask)
 
 
-def get_masked_t1_curr(margs):
-    t1, mask, args = margs
-    smooth_kernel = args.smooth_kernel
-    normalize = args.normalize
-    return get_masked_t1(t1, mask, smooth_kernel, normalize)
-
-
-def _get_masked_t1s(args, t1s, supermask):
-    n_jobs = min(args.cpus, len(t1s))
-    results = joblib.Parallel(n_jobs=n_jobs, batch_size=1, verbose=10)(
-        joblib.delayed(get_masked_t1)(t1, supermask, args.smooth_kernel, args.normalize)
+def _get_masked_t1s(t1s, supermask, smooth_kernel, normalize, cpus):
+    n_jobs = min(cpus, len(t1s))
+    results = joblib.Parallel(n_jobs=n_jobs, batch_size=1, verbose=1)(
+        joblib.delayed(get_masked_t1)(t1, supermask, smooth_kernel, normalize)
         for t1 in t1s
     )
     return results
 
 
-def get_masked_t1s(args, t1s, supermask):
-    ic("Compute super brain mask")
+def get_masked_t1s(t1s, supermask, smooth_kernel, normalize, cpus):
     results = []
     try:
-        results = _get_masked_t1s(args, t1s, supermask)
+        results = _get_masked_t1s(t1s, supermask, smooth_kernel, normalize, cpus)
     except Exception as e:
         error = ValueError(f"Error while masking T1s: {e}")
-        ic(error)
-        ic(args)
-        ic(t1s)
-        ic(supermask)
+        logger.error(error)
+        logger.error(t1s)
+        logger.error(supermask)
         raise e
     return np.stack(results)
 

@@ -315,5 +315,5 @@ def get_method_names():
     return ___methods.keys()
 
 
-def get_methods(args):
-    return [___methods[name] for name in args.multiple_comparison_tests]
+def get_methods(methods):
+    return [___methods[name] for name in methods]

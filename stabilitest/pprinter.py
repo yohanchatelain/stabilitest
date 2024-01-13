@@ -103,3 +103,7 @@ def print_sep2(msg):
 
 def print_sep3(msg):
     print_sep(msg, sep_h3)
+
+
+def hyperparameters_to_str(hyperparameters):
+    return ", ".join([f"{k}: {v}" for k, v in hyperparameters.items()])

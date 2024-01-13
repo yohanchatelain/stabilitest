@@ -1,3 +1,7 @@
+_defaults_mask_combination = ["union", "intersection", "identity"]
+_defaults_smoothing_kernel = list(range(21))
+
+
 def init_global_args(parser):
     parser.add_argument("--config-file", action="store", default=None)
     parser.add_argument(
@@ -18,7 +22,7 @@ def init_global_args(parser):
         "--mask-combination",
         action="store",
         type=str,
-        choices=["union", "intersection", "identity"],
+        choices=_defaults_mask_combination,
         default="union",
         help="Method to combine brain mask (default %(default)s)\n'identity' uses each voxel mask",
     )
