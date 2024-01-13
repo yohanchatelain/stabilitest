@@ -195,20 +195,6 @@ def main(args=None):
 
     parser, parsed_args = parse_args.parse_args(args)
 
-    if parsed_args.debug:
-        logger.set_debug_mode()
-
-    # if parsed_args.verbose:
-    #     pprinter.enable_verbose_mode()
-
-    if parsed_args.analysis == "list-domain":
-        ic(parser)
-        ic(parsed_args)
-        ic(dir(parser._subparsers))
-        ic(dir(parsed_args))
-        parser.print_help()
-        return
-
     if parsed_args.help_info_list:
         info = stabilitest.help.info_list()
         print(info)

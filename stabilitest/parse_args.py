@@ -30,7 +30,6 @@ def load_configuration_file(configuration_file):
 
 
 def init_global_args(parser):
-    parser.add_argument("--debug", action="store_true", help="Debug mode")
     parser.add_argument(
         "--configuration-file", "-c", metavar="filename", help="Configuration file"
     )
@@ -45,39 +44,6 @@ def init_global_args(parser):
         help="List all arguments available for --help-info",
         action="store_true",
     )
-
-
-# def init_stats_args(parser):
-#     parser.add_argument(
-#         "--confidence",
-#         action="store",
-#         default=[0.95],
-#         type=float,
-#         metavar="confidence",
-#         help="Confidence value (default: %(default)s)",
-#         nargs="+",
-#     )
-#     parser.add_argument(
-#         "--distribution",
-#         choices=stabilitest.statistics.distribution.get_distribution_names(),
-#         metavar="distribution",
-#         default="normal",
-#         help="Distribution type (default: %(default)s)\n%(choices)s",
-#     )
-#     parser.add_argument(
-#         "--parallel-fitting", action="store_true", help="Parallel fitting"
-#     )
-
-
-# def init_multiple_comparision_tests_args(parser):
-#     parser.add_argument(
-#         "--multiple-comparison-tests",
-#         nargs="+",
-#         metavar="test",
-#         default=["fwe-bonferroni"],
-#         choices=stabilitest.statistics.multiple_testing.get_method_names(),
-#         help="Multiple comparison tests (default: %(default)s))\n%(choices)s",
-#     )
 
 
 # Global submodules (to load before domain submodules)
@@ -95,8 +61,6 @@ def init_module_single_test(parser):
     """
     subparser = parser.add_parser("single-test", description=msg, help=msg)
     init_global_args(subparser)
-    # init_stats_args(subparser)
-    # init_multiple_comparision_tests_args(subparser)
 
     return subparser
 
@@ -135,16 +99,6 @@ def init_module_stats(parser):
     init_global_args(subparser)
     subparser.set_defaults(output="stats")
 
-    return subparser
-
-
-def init_module_domain_list(parser):
-    msg = """
-    Submodule for listing available domains
-    """
-    subparser = parser.add_parser(
-        "list-domain", description=msg, help=msg, add_help=False
-    )
     return subparser
 
 
@@ -205,8 +159,6 @@ Multiple comparison tests
         formatter_class=argparse.RawTextHelpFormatter,
     )
     init_global_args(subparser)
-    # init_stats_args(subparser)
-    # init_multiple_comparision_tests_args(subparser)
 
     subparser.add_argument(
         "--model",
@@ -231,7 +183,6 @@ domain_modules = {
 }
 
 analysis_modules = {
-    "list-domain": init_module_domain_list,
     "configurator": init_module_configurator,
     "single-test": init_module_single_test,
     "cross-validation": init_module_cross_validation,
@@ -261,10 +212,7 @@ def init_analysis_modules(parser):
         metavar="",
     )
     for analysis_init in analysis_modules.values():
-        analysis_parser = analysis_init(subparser)
-        # init_domain_modules(
-        #     analysis_parser, required=analysis_init != init_module_domain_list
-        # )
+        analysis_init(subparser)
 
 
 def parse_args(args):
