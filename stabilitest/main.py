@@ -5,7 +5,8 @@ import numpy as np
 from icecream import ic
 
 import stabilitest
-import stabilitest.help
+
+# import stabilitest.help
 import stabilitest.model as model
 import stabilitest.mri_loader.sample
 import stabilitest.normality
@@ -14,7 +15,6 @@ import stabilitest.parse_args as parse_args
 import stabilitest.pprinter as pprinter
 import stabilitest.statistics.stats
 from stabilitest.collect import Collector
-import stabilitest.logger as logger
 
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
@@ -195,15 +195,15 @@ def main(args=None):
 
     parser, parsed_args = parse_args.parse_args(args)
 
-    if parsed_args.help_info_list:
-        info = stabilitest.help.info_list()
-        print(info)
-        return
+    # if parsed_args.help_info_list:
+    #     info = stabilitest.help.info_list()
+    #     print(info)
+    #     return
 
-    if parsed_args.help_info:
-        info = stabilitest.help.main(parsed_args.help_info)
-        print(info)
-        return
+    # if parsed_args.help_info:
+    #     info = stabilitest.help.main(parsed_args.help_info)
+    #     print(info)
+    #     return
 
     if parsed_args.analysis not in parse_args.analysis_modules:
         parser.print_help()

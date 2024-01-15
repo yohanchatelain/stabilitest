@@ -4,7 +4,6 @@ import os
 import faker
 import numpy as np
 
-import stabilitest.logger as logger
 import stabilitest.mri_loader.image as mri_image
 import stabilitest.mri_loader.parse_args as mri_args
 from stabilitest.parse_args import _default_confidence_values

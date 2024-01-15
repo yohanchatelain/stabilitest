@@ -8,13 +8,10 @@ import nilearn
 import nilearn.image
 import nilearn.masking
 import numpy as np
-import tqdm
-from icecream import ic
 from nilearn.masking import apply_mask, intersect_masks
 
 import stabilitest.mri_loader.constants as mri_constants
 import stabilitest.pprinter as mrip
-import stabilitest.logger as logger
 
 
 def load_derivative(path):

@@ -31,9 +31,6 @@ def load_configuration_file(configuration_file):
 
 def init_global_args(parser):
     parser.add_argument(
-        "--configuration-file", "-c", metavar="filename", help="Configuration file"
-    )
-    parser.add_argument(
         "--help-info",
         help="Print help information for a specific argument",
         metavar="argument",
@@ -61,6 +58,13 @@ def init_module_single_test(parser):
     """
     subparser = parser.add_parser("single-test", description=msg, help=msg)
     init_global_args(subparser)
+    subparser.add_argument(
+        "--configuration-file",
+        "-c",
+        metavar="filename",
+        help="Configuration file",
+        required=True,
+    )
 
     return subparser
 

@@ -9,7 +9,6 @@ from sklearn.model_selection import KFold
 import stabilitest.pprinter as pprinter
 import stabilitest.statistics.distribution as dist
 import stabilitest.statistics.multiple_testing as mt
-import stabilitest.logger as logger
 
 Result = namedtuple("result", "reject tests passed confidence")
 

@@ -312,7 +312,7 @@ def get_description():
 
 
 def get_method_names():
-    return ___methods.keys()
+    return list(___methods.keys())
 
 
 def get_methods(methods):
