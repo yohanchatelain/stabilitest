@@ -17,7 +17,7 @@ def preprocess(
     pass
 
 
-def configurator(args):
+def configurator(as_string=False):
     fake = faker.Faker()
     config = {
         "output": "output.pkl",
@@ -33,7 +33,9 @@ def configurator(args):
         "normalize": True,
         "hyperparameters": {},
     }
-    return json.dumps(config, indent=2)
+    if as_string:
+        return json.dumps(config, indent=2)
+    return config
 
 
 class NumpySample(Sample):

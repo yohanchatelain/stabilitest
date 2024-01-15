@@ -30,7 +30,7 @@ def get_sample_module(args):
 
 def run_configurator(args, collector):
     sample_module = get_sample_module(args)
-    example = sample_module.configurator(args)
+    example = sample_module.configurator(as_string=True)
     print(example)
 
 

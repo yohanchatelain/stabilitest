@@ -12,7 +12,7 @@ from stabilitest.statistics.distribution import get_distribution_names
 from stabilitest.statistics.multiple_testing import get_method_names
 
 
-def configurator(args):
+def configurator(as_string=False):
     fake = faker.Faker()
     config = {
         "output": "output.pkl",
@@ -48,7 +48,9 @@ def configurator(args):
             "smooth-kernel": mri_args._defaults_smoothing_kernel,
         },
     }
-    return json.dumps(config, indent=2)
+    if as_string:
+        return json.dumps(config, indent=2)
+    return config
 
 
 class MRISample(Sample):
@@ -210,7 +212,6 @@ class MRISample(Sample):
 class MRISampleReference(MRISample):
     def load(self, force=False):
         print("Load reference sample")
-        logger.debug(self.config)
         self._load_t1_and_brain_maks(
             prefix=self.config["reference"]["prefix"],
             dataset=self.config["reference"]["dataset"],
@@ -262,7 +263,6 @@ class MRISampleReference(MRISample):
 class MRISampleTarget(MRISample):
     def load(self, force=False):
         print("Load target sample")
-        logger.debug(self.config)
         self._load_t1_and_brain_maks(
             prefix=self.config["target"]["prefix"],
             dataset=self.config["target"]["dataset"],

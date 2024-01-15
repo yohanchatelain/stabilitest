@@ -58,14 +58,6 @@ def init_module_single_test(parser):
     """
     subparser = parser.add_parser("single-test", description=msg, help=msg)
     init_global_args(subparser)
-    subparser.add_argument(
-        "--configuration-file",
-        "-c",
-        metavar="filename",
-        help="Configuration file",
-        required=True,
-    )
-
     return subparser
 
 
@@ -233,6 +225,12 @@ def parse_args(args):
         help="Domain submodules.\nChoices: %(choices)s",
         choices=["smri", "numpy"],
     )
+    domain.add_argument(
+        "--configuration-file",
+        metavar="filename",
+        help="Configuration file",
+    )
+
     init_global_args(parser)
 
     known_args, _ = parser.parse_known_args(args)
