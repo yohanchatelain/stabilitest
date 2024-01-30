@@ -198,11 +198,9 @@ def load_brain_mask(prefix, dataset, subject, template, datatype):
 def get_masked_t1(t1, mask, smooth_kernel, normalize):
     if t1 is None:
         error = ValueError("No T1 provided")
-        logger.error(error)
         raise error
     if mask is None:
         error = ValueError(f"No mask provided for {t1.get_filename()} T1 image")
-        logger.error(error)
         raise error
 
     if smooth_kernel == 0:
@@ -210,10 +208,6 @@ def get_masked_t1(t1, mask, smooth_kernel, normalize):
     try:
         masked = apply_mask(imgs=t1, mask_img=mask, smoothing_fwhm=smooth_kernel)
     except TypeError as e:
-        logger.error(e)
-        logger.error(t1)
-        logger.error(mask)
-        logger.error(smooth_kernel)
         raise e
 
     if normalize:
@@ -241,9 +235,6 @@ def get_masked_t1s(t1s, supermask, smooth_kernel, normalize, cpus):
         results = _get_masked_t1s(t1s, supermask, smooth_kernel, normalize, cpus)
     except Exception as e:
         error = ValueError(f"Error while masking T1s: {e}")
-        logger.error(error)
-        logger.error(t1s)
-        logger.error(supermask)
         raise e
     return np.stack(results)
 

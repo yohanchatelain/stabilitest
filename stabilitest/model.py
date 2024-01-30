@@ -40,7 +40,7 @@ def run_tests(
     p_values = distribution.p_value(target_sample.get_subsample(target_id)).ravel()
     p_values.sort()
 
-    methods = mt.get_methods(config["multiple-comparisons-tests"])
+    methods = mt.get_methods(config["multiple-comparison-tests"])
 
     results = {}
 
