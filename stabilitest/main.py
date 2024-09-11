@@ -195,16 +195,6 @@ def main(args=None):
 
     parser, parsed_args = parse_args.parse_args(args)
 
-    # if parsed_args.help_info_list:
-    #     info = stabilitest.help.info_list()
-    #     print(info)
-    #     return
-
-    # if parsed_args.help_info:
-    #     info = stabilitest.help.main(parsed_args.help_info)
-    #     print(info)
-    #     return
-
     if parsed_args.analysis not in parse_args.analysis_modules:
         parser.print_help()
         return

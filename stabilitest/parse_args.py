@@ -227,6 +227,7 @@ def parse_args(args):
     )
     domain.add_argument(
         "--configuration-file",
+        required=True,
         metavar="filename",
         help="Configuration file",
     )

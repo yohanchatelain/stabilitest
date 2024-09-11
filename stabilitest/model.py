@@ -2,6 +2,8 @@ import itertools
 import json
 from collections import namedtuple
 
+import joblib
+
 import numpy as np
 import tqdm
 from sklearn.model_selection import KFold
@@ -181,6 +183,7 @@ def run_test_over_hyperparameters(args, sample_module, collector, run_test):
     config = load_configuration(args.configuration_file)
     hyperparameters_names, hyperparameters_values = build_hyperparameters(config)
     fvr_map = {}
+
     for hpv in hyperparameters_values:
         hyperparameters = dict(zip(hyperparameters_names, hpv))
         for distribution in config["distribution"]:
